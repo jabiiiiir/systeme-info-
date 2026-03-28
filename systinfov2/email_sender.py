@@ -1,0 +1,63 @@
+# ==============================================================================
+# email_sender.py - Envoi automatique d'emails aux opérateurs
+#
+# Utilise le protocole SMTP avec TLS (compatible Gmail).
+# Pour Gmail : activez la validation en 2 étapes, puis créez un
+# "Mot de passe d'application" dans les paramètres de votre compte Google.
+# ==============================================================================
+
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+import config
+
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT   = 587
+
+
+def send_email(to_email, subject, body):
+    """
+    Envoie un email en texte brut.
+
+    Paramètres :
+        to_email : adresse email du destinataire
+        subject  : objet du message
+        body     : corps du message
+
+    Retourne True si l'envoi réussit, False sinon.
+    """
+    msg = MIMEMultipart()
+    msg["From"]    = config.EMAIL_SENDER
+    msg["To"]      = to_email
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain", "utf-8"))
+
+    try:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.ehlo()
+            server.starttls()                          # Chiffrement TLS
+            server.login(config.EMAIL_SENDER, config.EMAIL_PASSWORD)
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"[Email] Erreur envoi vers {to_email} : {e}")
+        return False
+
+
+def build_operator_schedule(operator_name, schedule_lines):
+    """
+    Construit le corps de l'email de planning destiné à un opérateur.
+
+    Paramètres :
+        operator_name  : prénom/nom de l'opérateur
+        schedule_lines : liste de chaînes décrivant chaque tâche
+
+    Retourne une chaîne (le corps de l'email).
+    """
+    body  = f"Bonjour {operator_name},\n\n"
+    body += "Voici votre planning de production pour aujourd'hui :\n\n"
+    for line in schedule_lines:
+        body += f"  - {line}\n"
+    body += "\nBonne journée de travail,\nVoodoo Production Manager"
+    return body
