@@ -83,6 +83,24 @@ class EmailWorker(QThread):
         self.finished.emit(sent, errors)
 
 
+class SimpleEmailWorker(QThread):
+    """Envoie un email unique dans un thread séparé."""
+    finished = pyqtSignal(bool, str)   # (succès, message_erreur)
+
+    def __init__(self, to_email, subject, body):
+        super().__init__()
+        self.to_email = to_email
+        self.subject  = subject
+        self.body     = body
+
+    def run(self):
+        try:
+            ok = email_sender.send_email(self.to_email, self.subject, self.body)
+            self.finished.emit(ok, "" if ok else "Échec inconnu")
+        except Exception as e:
+            self.finished.emit(False, str(e))
+
+
 # ==============================================================================
 # Onglet 1 : Prix de l'électricité
 # ==============================================================================
@@ -94,9 +112,10 @@ class PricesTab(QWidget):
     Alerte automatiquement si des prix négatifs sont détectés.
     """
 
-    def __init__(self):
+    def __init__(self, get_manager_info=None):
         super().__init__()
-        self.prices = None          # pandas.Series ou None
+        self.prices = None                      # pandas.Series ou None
+        self._get_manager_info = get_manager_info  # callable → (nom, email) ou None
         self._build_ui()
         # Chargement automatique des prix au démarrage (cache DB en priorité)
         QTimer.singleShot(100, self._auto_load_prices)
@@ -120,7 +139,22 @@ class PricesTab(QWidget):
         top.addStretch()
         layout.addLayout(top)
 
-        # --- Zone d'information (prix min / max / négatifs) ---
+        # --- Barre de seuil d'alerte ---
+        threshold_row = QHBoxLayout()
+        threshold_row.addWidget(QLabel("Seuil d'alerte :"))
+        self.spn_threshold = QDoubleSpinBox()
+        self.spn_threshold.setRange(-500, 500)
+        self.spn_threshold.setSuffix(" €/MWh")
+        self.spn_threshold.setValue(0.0)
+        self.spn_threshold.setDecimals(2)
+        threshold_row.addWidget(self.spn_threshold)
+        btn_check = QPushButton("Vérifier le seuil")
+        btn_check.clicked.connect(self._check_price_threshold)
+        threshold_row.addWidget(btn_check)
+        threshold_row.addStretch()
+        layout.addLayout(threshold_row)
+
+        # --- Zone d'information (prix min / max) ---
         self.lbl_info = QLabel("Cliquez sur « Charger les prix » pour afficher les données.")
         self.lbl_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.lbl_info)
@@ -165,7 +199,7 @@ class PricesTab(QWidget):
         db.upsert_electricity_prices(date_str, prices)
         self.btn_load.setEnabled(True)
         self._draw_chart()
-        self._check_negative_prices()
+        self._check_price_threshold()
 
     def _on_prices_error(self, message):
         self.btn_load.setEnabled(True)
@@ -206,16 +240,45 @@ class PricesTab(QWidget):
         info = f"Min : {mn:.2f} €/MWh   |   Max : {mx:.2f} €/MWh   |   Heures négatives : {neg_count}"
         self.lbl_info.setText(info)
 
-    def _check_negative_prices(self):
-        """Affiche une alerte si des prix négatifs existent."""
-        neg = api_entsoe.get_negative_prices(self.prices)
-        if not neg.empty:
-            hours = ", ".join(t.strftime("%H:%M") for t in neg.index.to_pydatetime())
-            QMessageBox.warning(
-                self, "Prix négatifs détectés",
-                f"Des prix négatifs ont été détectés aux heures suivantes :\n{hours}\n\n"
-                "C'est le moment idéal pour planifier vos productions énergivores !"
+    def _check_price_threshold(self):
+        """Alerte si des prix passent sous le seuil défini via l'interface."""
+        if self.prices is None:
+            QMessageBox.information(self, "Prix non chargés",
+                                    "Chargez d'abord les prix avant de vérifier le seuil.")
+            return
+        threshold = self.spn_threshold.value()
+        below = self.prices[self.prices < threshold]
+        if below.empty:
+            QMessageBox.information(
+                self, "Aucune alerte",
+                f"Aucun prix ne descend sous le seuil de {threshold:.2f} €/MWh pour cette journée."
             )
+        else:
+            lines = "\n".join(
+                f"  {t.strftime('%H:%M')} : {v:.2f} €/MWh"
+                for t, v in zip(below.index.to_pydatetime(), below.values)
+            )
+            QMessageBox.warning(
+                self, f"Alerte seuil — {threshold:.2f} €/MWh",
+                f"Les prix descendent sous {threshold:.2f} €/MWh aux heures suivantes :\n\n"
+                f"{lines}"
+            )
+            # Envoi email au manager identifié
+            if self._get_manager_info:
+                manager_name, manager_email = self._get_manager_info()
+                if manager_email:
+                    date_str = self.date_edit.date().toString("dd/MM/yyyy")
+                    subject  = f"[Alerte prix] Seuil {threshold:.2f} €/MWh franchi — {date_str}"
+                    body     = (
+                        f"Bonjour {manager_name},\n\n"
+                        f"Une alerte de prix a été déclenchée pour le {date_str}.\n"
+                        f"Le prix de l'électricité descend sous le seuil de {threshold:.2f} €/MWh "
+                        f"aux heures suivantes :\n\n"
+                        f"{lines}\n\n"
+                        "Voodoo Production Manager"
+                    )
+                    self._alert_worker = SimpleEmailWorker(manager_email, subject, body)
+                    self._alert_worker.start()
 
     def get_prices(self):
         """Retourne la Series des prix (peut être None si pas encore chargée)."""
@@ -607,9 +670,10 @@ class OrdersTab(QWidget):
     - Envoyer les emails de planning à chaque opérateur concerné
     """
 
-    def __init__(self, prices_tab: PricesTab):
+    def __init__(self, prices_tab: PricesTab, get_manager_info=None):
         super().__init__()
-        self._prices_tab = prices_tab   # référence pour récupérer les prix chargés
+        self._prices_tab       = prices_tab
+        self._get_manager_info = get_manager_info  # callable → (nom, email) ou None
         self._build_ui()
         self._refresh_orders()
 
@@ -733,6 +797,25 @@ class OrdersTab(QWidget):
 
         db.insert_order(product_id, start_time, order_date)
         self._refresh_orders()
+
+        # Notification email au manager identifié
+        if self._get_manager_info:
+            manager_name, manager_email = self._get_manager_info()
+            if manager_email:
+                product_name = self.cmb_product.currentText()
+                subject = f"[Commande] {product_name} — {order_date}"
+                body = (
+                    f"Bonjour {manager_name},\n\n"
+                    f"Une nouvelle commande a été enregistrée :\n\n"
+                    f"  Produit    : {product_name}\n"
+                    f"  Date       : {order_date}\n"
+                    f"  Heure début: {start_time}\n"
+                    f"  Durée tot. : {total_min} min\n"
+                    f"  Fin prévue : {end_dt.strftime('%H:%M')}\n\n"
+                    "Voodoo Production Manager"
+                )
+                self._order_worker = SimpleEmailWorker(manager_email, subject, body)
+                self._order_worker.start()
 
     def _delete_order(self):
         rows = self.table.selectionModel().selectedRows()
@@ -897,27 +980,54 @@ class MainWindow(QMainWindow):
         db.create_all_tables()
         self._seed_demo_data()
 
+        # --- Barre d'identification ---
+        id_box = QGroupBox("Identification")
+        id_form = QHBoxLayout(id_box)
+        id_form.addWidget(QLabel("Nom / Entreprise :"))
+        self.inp_manager_name  = QLineEdit()
+        self.inp_manager_name.setPlaceholderText("ex: Jean Dupont — Voodoo Bakery")
+        id_form.addWidget(self.inp_manager_name)
+        id_form.addWidget(QLabel("Email :"))
+        self.inp_manager_email = QLineEdit()
+        self.inp_manager_email.setPlaceholderText("ex: responsable@voodoo.be")
+        id_form.addWidget(self.inp_manager_email)
+
         # Construction des onglets
         tabs = QTabWidget()
 
-        self.prices_tab = PricesTab()
+        self.prices_tab = PricesTab(get_manager_info=self._get_manager_info)
         self.config_tab = ConfigTab()
-        self.orders_tab = OrdersTab(self.prices_tab)
+        self.orders_tab = OrdersTab(self.prices_tab, get_manager_info=self._get_manager_info)
 
-        tabs.addTab(self.prices_tab, "Prix Électricité")
-        tabs.addTab(self.config_tab, "Configuration")
-        tabs.addTab(self.orders_tab, "Commandes")
+        tabs.addTab(self.config_tab,  "Configuration")
+        tabs.addTab(self.prices_tab,  "Prix Électricité")
+        tabs.addTab(self.orders_tab,  "Commandes")
 
         # Quand on revient sur l'onglet Commandes, on rafraîchit le combo produits
         tabs.currentChanged.connect(self._on_main_tab_change)
 
-        self.setCentralWidget(tabs)
+        # Assemblage : barre d'identification au-dessus des onglets
+        central = QWidget()
+        central_layout = QVBoxLayout(central)
+        central_layout.setContentsMargins(6, 6, 6, 6)
+        central_layout.setSpacing(4)
+        central_layout.addWidget(id_box)
+        central_layout.addWidget(tabs)
+
+        self.setCentralWidget(central)
         self._tabs = tabs
 
         self._apply_stylesheet()
 
+    def _get_manager_info(self):
+        """Retourne (nom, email) saisis dans la barre d'identification."""
+        return (
+            self.inp_manager_name.text().strip(),
+            self.inp_manager_email.text().strip(),
+        )
+
     def _on_main_tab_change(self, index):
-        if index == 2:  # Onglet Commandes
+        if index == 2:  # Onglet Commandes (Config=0, Prix=1, Commandes=2)
             self.orders_tab.refresh_product_combo()
             self.orders_tab._refresh_orders()
 
