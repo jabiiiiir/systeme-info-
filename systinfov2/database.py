@@ -169,6 +169,15 @@ def insert_product(name):
     return new_id
 
 
+def update_product(product_id, name):
+    """Renomme un produit existant."""
+    conn = _connect()
+    c = conn.cursor()
+    c.execute("UPDATE products SET name=? WHERE id=?", (name, product_id))
+    conn.commit()
+    conn.close()
+
+
 def select_products():
     """Retourne tous les produits : (id, name)."""
     conn = _connect()

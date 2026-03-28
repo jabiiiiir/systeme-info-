@@ -479,16 +479,19 @@ class ProductsTab(QWidget):
         self.list_products.currentItemChanged.connect(self._on_product_select)
         lv.addWidget(self.list_products)
 
-        # Formulaire d'ajout de produit
+        # Formulaire d'ajout / modification de produit
         p_form = QHBoxLayout()
         self.inp_prod_name = QLineEdit()
-        self.inp_prod_name.setPlaceholderText("Nom du nouveau produit")
+        self.inp_prod_name.setPlaceholderText("Nom du produit")
         btn_add_prod = QPushButton("Ajouter")
+        btn_ren_prod = QPushButton("Renommer")
         btn_del_prod = QPushButton("Supprimer")
         btn_add_prod.clicked.connect(self._add_product)
+        btn_ren_prod.clicked.connect(self._rename_product)
         btn_del_prod.clicked.connect(self._delete_product)
         p_form.addWidget(self.inp_prod_name)
         p_form.addWidget(btn_add_prod)
+        p_form.addWidget(btn_ren_prod)
         p_form.addWidget(btn_del_prod)
         lv.addLayout(p_form)
 
@@ -551,8 +554,10 @@ class ProductsTab(QWidget):
         if current is None:
             self._current_product_id = None
             self.table_tasks.setRowCount(0)
+            self.inp_prod_name.clear()
             return
         self._current_product_id = current.data(Qt.ItemDataRole.UserRole)
+        self.inp_prod_name.setText(current.text())
         self._refresh_tasks()
 
     def _add_product(self):
@@ -562,6 +567,17 @@ class ProductsTab(QWidget):
             return
         db.insert_product(name)
         self.inp_prod_name.clear()
+        self.refresh_products()
+
+    def _rename_product(self):
+        if self._current_product_id is None:
+            QMessageBox.warning(self, "Sélection requise", "Sélectionnez d'abord un produit à renommer.")
+            return
+        name = self.inp_prod_name.text().strip()
+        if not name:
+            QMessageBox.warning(self, "Champ manquant", "Entrez le nouveau nom du produit.")
+            return
+        db.update_product(self._current_product_id, name)
         self.refresh_products()
 
     def _delete_product(self):
@@ -793,6 +809,25 @@ class OrdersTab(QWidget):
                 f"Ce produit dure {total_min} min et dépasse minuit.\n"
                 "Choisissez une heure de début plus tôt."
             )
+            if self._get_manager_info:
+                manager_name, manager_email = self._get_manager_info()
+                if manager_email:
+                    product_name = self.cmb_product.currentText()
+                    subject = f"[Alerte timing] {product_name} dépasse minuit — {order_date}"
+                    body = (
+                        f"Bonjour {manager_name},\n\n"
+                        f"La commande suivante ne sera pas terminée avant la fin de la journée :\n\n"
+                        f"  Produit     : {product_name}\n"
+                        f"  Date        : {order_date}\n"
+                        f"  Heure début : {start_time}\n"
+                        f"  Durée tot.  : {total_min} min\n"
+                        f"  Fin prévue  : {end_dt.strftime('%H:%M')} "
+                        f"(le {end_dt.strftime('%d/%m/%Y')})\n\n"
+                        "La commande n'a pas été enregistrée.\n\n"
+                        "Voodoo Production Manager"
+                    )
+                    self._timing_worker = SimpleEmailWorker(manager_email, subject, body)
+                    self._timing_worker.start()
             return
 
         db.insert_order(product_id, start_time, order_date)
