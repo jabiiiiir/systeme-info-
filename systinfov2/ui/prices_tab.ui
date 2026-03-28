@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PricesTab</class>
+ <widget class="QWidget" name="PricesTab">
+  <property name="geometry">
+   <rect><x>0</x><y>0</y><width>900</width><height>600</height></rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <!-- Barre de contrôle : date + bouton charger -->
+   <item>
+    <layout class="QHBoxLayout" name="top_row">
+     <item>
+      <widget class="QLabel" name="lbl_date_label"><property name="text"><string>Date :</string></property></widget>
+     </item>
+     <item>
+      <widget class="QDateEdit" name="date_edit">
+       <property name="calendarPopup"><bool>true</bool></property>
+       <property name="minimumWidth"><number>130</number></property>
+       <property name="displayFormat"><string>dd/MM/yyyy</string></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_load">
+       <property name="text"><string>Charger les prix</string></property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="top_spacer">
+       <property name="orientation"><enum>Qt::Horizontal</enum></property>
+       <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <!-- Barre de seuil d'alerte -->
+   <item>
+    <layout class="QHBoxLayout" name="threshold_row">
+     <item>
+      <widget class="QLabel" name="lbl_threshold"><property name="text"><string>Seuil d'alerte :</string></property></widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="spn_threshold">
+       <property name="minimum"><double>-500.000000000000000</double></property>
+       <property name="maximum"><double>500.000000000000000</double></property>
+       <property name="suffix"><string> €/MWh</string></property>
+       <property name="decimals"><number>2</number></property>
+       <property name="value"><double>0.000000000000000</double></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_check_threshold">
+       <property name="text"><string>Vérifier le seuil</string></property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="threshold_spacer">
+       <property name="orientation"><enum>Qt::Horizontal</enum></property>
+       <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <!-- Label d'information (min/max/heures négatives) -->
+   <item>
+    <widget class="QLabel" name="lbl_info">
+     <property name="text"><string>Cliquez sur « Charger les prix » pour afficher les données.</string></property>
+     <property name="alignment"><set>Qt::AlignCenter</set></property>
+    </widget>
+   </item>
+   <!-- Conteneur pour le graphique matplotlib (ajouté dynamiquement) -->
+   <item>
+    <widget class="QWidget" name="canvas_container">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <layout class="QVBoxLayout" name="canvas_layout"/>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

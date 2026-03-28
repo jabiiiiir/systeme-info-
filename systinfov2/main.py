@@ -7,6 +7,7 @@
 #   3. Commandes         - planification, calcul des coûts, envoi d'emails
 # ==============================================================================
 
+import os
 import sys
 import importlib
 from datetime import datetime, timedelta
@@ -14,6 +15,7 @@ from zoneinfo import ZoneInfo
 
 _TZ_CET = ZoneInfo("Europe/Brussels")
 
+from PyQt6 import uic
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QTabWidget, QVBoxLayout, QHBoxLayout,
     QFormLayout, QLabel, QLineEdit, QPushButton, QTableWidget, QTableWidgetItem,
@@ -31,6 +33,12 @@ from matplotlib.figure import Figure
 import database as db
 import api_entsoe
 import email_sender
+
+_UI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui")
+
+def _ui_path(filename):
+    """Retourne le chemin absolu vers un fichier .ui dans le dossier ui/."""
+    return os.path.join(_UI_DIR, filename)
 
 
 # ==============================================================================
@@ -116,53 +124,17 @@ class PricesTab(QWidget):
         super().__init__()
         self.prices = None                      # pandas.Series ou None
         self._get_manager_info = get_manager_info  # callable → (nom, email) ou None
-        self._build_ui()
-        # Chargement automatique des prix au démarrage (cache DB en priorité)
-        QTimer.singleShot(100, self._auto_load_prices)
-
-    def _build_ui(self):
-        layout = QVBoxLayout(self)
-
-        # --- Barre de contrôle (date + bouton) ---
-        top = QHBoxLayout()
-        top.addWidget(QLabel("Date :"))
-        self.date_edit = QDateEdit(QDate.currentDate())
-        self.date_edit.setCalendarPopup(True) 
-        self.date_edit.setDisplayFormat("dd/MM/yyyy")   # ← ajoute cette ligne
-        self.date_edit.setMinimumWidth(130)              # ← et cette ligne
-        top.addWidget(self.date_edit)
-        top.addWidget(self.date_edit)
-
-        self.btn_load = QPushButton("Charger les prix")
-        self.btn_load.clicked.connect(self.load_prices)
-        top.addWidget(self.btn_load)
-        top.addStretch()
-        layout.addLayout(top)
-
-        # --- Barre de seuil d'alerte ---
-        threshold_row = QHBoxLayout()
-        threshold_row.addWidget(QLabel("Seuil d'alerte :"))
-        self.spn_threshold = QDoubleSpinBox()
-        self.spn_threshold.setRange(-500, 500)
-        self.spn_threshold.setSuffix(" €/MWh")
-        self.spn_threshold.setValue(0.0)
-        self.spn_threshold.setDecimals(2)
-        threshold_row.addWidget(self.spn_threshold)
-        btn_check = QPushButton("Vérifier le seuil")
-        btn_check.clicked.connect(self._check_price_threshold)
-        threshold_row.addWidget(btn_check)
-        threshold_row.addStretch()
-        layout.addLayout(threshold_row)
-
-        # --- Zone d'information (prix min / max) ---
-        self.lbl_info = QLabel("Cliquez sur « Charger les prix » pour afficher les données.")
-        self.lbl_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.lbl_info)
-
-        # --- Graphique matplotlib ---
+        uic.loadUi(_ui_path("prices_tab.ui"), self)
+        self.date_edit.setDate(QDate.currentDate())
+        # Ajout du graphique matplotlib dans le conteneur prévu
         self.figure = Figure(figsize=(8, 4))
         self.canvas = FigureCanvas(self.figure)
-        layout.addWidget(self.canvas)
+        self.canvas_container.layout().addWidget(self.canvas)
+        # Connexion des signaux
+        self.btn_load.clicked.connect(self.load_prices)
+        self.btn_check_threshold.clicked.connect(self._check_price_threshold)
+        # Chargement automatique des prix au démarrage (cache DB en priorité)
+        QTimer.singleShot(100, self._auto_load_prices)
 
     def _auto_load_prices(self):
         """

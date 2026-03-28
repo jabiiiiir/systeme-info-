@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MachinesTab</class>
+ <widget class="QWidget" name="MachinesTab">
+  <property name="geometry">
+   <rect><x>0</x><y>0</y><width>900</width><height>600</height></rect>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout">
+   <item>
+    <widget class="QTableWidget" name="table">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>2</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <column><property name="text"><string>Nom</string></property></column>
+     <column><property name="text"><string>Puissance (W)</string></property></column>
+     <column><property name="text"><string>Opérateur</string></property></column>
+     <column><property name="text"><string>Email opérateur</string></property></column>
+     <column><property name="text"><string>Coût fixe (€)</string></property></column>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="right_panel">
+     <layout class="QVBoxLayout" name="right_vbox">
+      <item>
+       <widget class="QGroupBox" name="grp_machine_details">
+        <property name="title"><string>Détails de la machine</string></property>
+        <layout class="QFormLayout" name="form_machine">
+         <item row="0" column="0">
+          <widget class="QLabel" name="lbl_name"><property name="text"><string>Nom :</string></property></widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="inp_name"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="lbl_power"><property name="text"><string>Puissance (W) :</string></property></widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QDoubleSpinBox" name="inp_power">
+           <property name="minimum"><double>0.000000000000000</double></property>
+           <property name="maximum"><double>100000.000000000000000</double></property>
+           <property name="suffix"><string> W</string></property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="lbl_oper"><property name="text"><string>Opérateur :</string></property></widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="inp_oper"/>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="lbl_email"><property name="text"><string>Email opérateur :</string></property></widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLineEdit" name="inp_email"/>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="lbl_fixed"><property name="text"><string>Coût fixe (€) :</string></property></widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QDoubleSpinBox" name="inp_fixed">
+           <property name="minimum"><double>0.000000000000000</double></property>
+           <property name="maximum"><double>10000.000000000000000</double></property>
+           <property name="suffix"><string> €</string></property>
+           <property name="decimals"><number>2</number></property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="machine_btn_row">
+        <item>
+         <widget class="QPushButton" name="btn_add"><property name="text"><string>Ajouter</string></property></widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_update"><property name="text"><string>Modifier</string></property></widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_delete"><property name="text"><string>Supprimer</string></property></widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_clear"><property name="text"><string>Effacer</string></property></widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <spacer name="right_spacer">
+        <property name="orientation"><enum>Qt::Vertical</enum></property>
+        <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
