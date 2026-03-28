@@ -71,6 +71,17 @@ def create_all_tables():
         )
     """)
 
+    # Table des prix d'électricité (cache ENTSO-E)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS electricity_prices (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            date          TEXT    NOT NULL,
+            hour_ts       TEXT    NOT NULL,
+            price_eur_mwh REAL    NOT NULL,
+            UNIQUE(date, hour_ts)
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -285,3 +296,47 @@ def delete_order(order_id):
     c.execute("DELETE FROM orders WHERE id=?", (order_id,))
     conn.commit()
     conn.close()
+
+
+# ==============================================================================
+# ELECTRICITY_PRICES (cache des prix ENTSO-E)
+# ==============================================================================
+
+def upsert_electricity_prices(date_str, prices_series):
+    """
+    Stocke ou met à jour les prix d'électricité pour une date donnée.
+    prices_series : pandas.Series indexé par Timestamp (Europe/Brussels).
+    date_str      : 'YYYY-MM-DD'
+    """
+    conn = _connect()
+    c = conn.cursor()
+    for ts, price in prices_series.items():
+        c.execute(
+            "INSERT OR REPLACE INTO electricity_prices (date, hour_ts, price_eur_mwh) "
+            "VALUES (?, ?, ?)",
+            (date_str, ts.isoformat(), float(price))
+        )
+    conn.commit()
+    conn.close()
+
+
+def select_electricity_prices(date_str):
+    """
+    Retourne les prix stockés pour une date sous forme de pandas.Series,
+    ou None si aucune donnée n'existe pour cette date.
+    date_str : 'YYYY-MM-DD'
+    """
+    import pandas as pd
+    conn = _connect()
+    c = conn.cursor()
+    c.execute(
+        "SELECT hour_ts, price_eur_mwh FROM electricity_prices WHERE date=? ORDER BY hour_ts",
+        (date_str,)
+    )
+    rows = c.fetchall()
+    conn.close()
+    if not rows:
+        return None
+    index  = pd.DatetimeIndex([pd.Timestamp(r[0]) for r in rows])
+    values = [r[1] for r in rows]
+    return pd.Series(values, index=index)

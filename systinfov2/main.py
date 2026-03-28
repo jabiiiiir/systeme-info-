@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
     QListWidget, QListWidgetItem, QComboBox, QTimeEdit, QDateEdit, QMessageBox,
     QSplitter, QGroupBox, QHeaderView, QSpinBox, QDoubleSpinBox
 )
-from PyQt6.QtCore import Qt, QTime, QDate, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QTime, QDate, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont, QColor
 
 import matplotlib
@@ -95,6 +95,8 @@ class PricesTab(QWidget):
         super().__init__()
         self.prices = None          # pandas.Series ou None
         self._build_ui()
+        # Chargement automatique des prix au démarrage (cache DB en priorité)
+        QTimer.singleShot(100, self._auto_load_prices)
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
@@ -103,7 +105,10 @@ class PricesTab(QWidget):
         top = QHBoxLayout()
         top.addWidget(QLabel("Date :"))
         self.date_edit = QDateEdit(QDate.currentDate())
-        self.date_edit.setCalendarPopup(True)
+        self.date_edit.setCalendarPopup(True) 
+        self.date_edit.setDisplayFormat("dd/MM/yyyy")   # ← ajoute cette ligne
+        self.date_edit.setMinimumWidth(130)              # ← et cette ligne
+        top.addWidget(self.date_edit)
         top.addWidget(self.date_edit)
 
         self.btn_load = QPushButton("Charger les prix")
@@ -122,6 +127,21 @@ class PricesTab(QWidget):
         self.canvas = FigureCanvas(self.figure)
         layout.addWidget(self.canvas)
 
+    def _auto_load_prices(self):
+        """
+        Au démarrage : charge les prix depuis le cache DB.
+        Si absent, lance un appel API automatique pour la date du jour.
+        """
+        qdate    = self.date_edit.date()
+        date_str = qdate.toString("yyyy-MM-dd")
+        cached   = db.select_electricity_prices(date_str)
+        if cached is not None:
+            self.prices = cached
+            self.lbl_info.setText("Prix chargés depuis le cache local.")
+            self._draw_chart()
+        else:
+            self.load_prices()
+
     def load_prices(self):
         """Lance le chargement des prix dans un thread séparé pour ne pas bloquer l'interface."""
         qdate  = self.date_edit.date()
@@ -137,6 +157,9 @@ class PricesTab(QWidget):
 
     def _on_prices_loaded(self, prices):
         self.prices = prices
+        # Sauvegarde en base de données pour réutilisation future
+        date_str = self.date_edit.date().toString("yyyy-MM-dd")
+        db.upsert_electricity_prices(date_str, prices)
         self.btn_load.setEnabled(True)
         self._draw_chart()
         self._check_negative_prices()
