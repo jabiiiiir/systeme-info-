@@ -10,6 +10,9 @@
 import sys
 import importlib
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+_TZ_CET = ZoneInfo("Europe/Brussels")
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QTabWidget, QVBoxLayout, QHBoxLayout,
@@ -806,7 +809,7 @@ class OrdersTab(QWidget):
         schedules: dict = {}
 
         for o_id, p_name, start_time, p_id in orders:
-            current_dt = datetime.strptime(f"{order_date} {start_time}", "%Y-%m-%d %H:%M")
+            current_dt = datetime.strptime(f"{order_date} {start_time}", "%Y-%m-%d %H:%M").replace(tzinfo=_TZ_CET)
             tasks = db.select_tasks_for_product(p_id)
 
             for task in tasks:
@@ -820,7 +823,7 @@ class OrdersTab(QWidget):
                 end_dt = current_dt + timedelta(minutes=duration_min)
                 line = (
                     f"{p_name} — Étape {step_order} ({machine_name}) : "
-                    f"{current_dt.strftime('%H:%M')} → {end_dt.strftime('%H:%M')} "
+                    f"{current_dt.strftime('%H:%M %Z')} → {end_dt.strftime('%H:%M %Z')} "
                     f"({duration_min} min)"
                 )
                 schedules.setdefault(key, []).append(line)
