@@ -3,42 +3,84 @@
  <class>OrdersTab</class>
  <widget class="QWidget" name="OrdersTab">
   <property name="geometry">
-   <rect><x>0</x><y>0</y><width>900</width><height>650</height></rect>
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>646</height>
+   </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QGroupBox" name="grp_add_order">
-     <property name="title"><string>Ajouter une commande</string></property>
+     <property name="title">
+      <string>Ajouter une commande</string>
+     </property>
      <layout class="QFormLayout" name="form_add">
       <item row="0" column="0">
-       <widget class="QLabel" name="lbl_product"><property name="text"><string>Produit :</string></property></widget>
+       <widget class="QLabel" name="lbl_product">
+        <property name="text">
+         <string>Produit :</string>
+        </property>
+       </widget>
       </item>
       <item row="0" column="1">
        <widget class="QComboBox" name="cmb_product"/>
       </item>
       <item row="1" column="0">
-       <widget class="QLabel" name="lbl_time"><property name="text"><string>Heure de début :</string></property></widget>
+       <widget class="QLabel" name="lbl_time">
+        <property name="text">
+         <string>Heure de début :</string>
+        </property>
+       </widget>
       </item>
       <item row="1" column="1">
        <widget class="QTimeEdit" name="time_start">
-        <property name="displayFormat"><string>HH:mm</string></property>
-        <property name="time"><time><hour>6</hour><minute>0</minute><second>0</second></time></property>
+        <property name="displayFormat">
+         <string>HH:mm</string>
+        </property>
+        <property name="time">
+         <time>
+          <hour>6</hour>
+          <minute>0</minute>
+          <second>0</second>
+         </time>
+        </property>
        </widget>
       </item>
       <item row="2" column="0">
-       <widget class="QLabel" name="lbl_date"><property name="text"><string>Date :</string></property></widget>
+       <widget class="QLabel" name="lbl_date">
+        <property name="text">
+         <string>Date :</string>
+        </property>
+       </widget>
       </item>
       <item row="2" column="1">
        <widget class="QDateEdit" name="date_order">
-        <property name="calendarPopup"><bool>true</bool></property>
+        <property name="calendarPopup">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="lbl_empty"><property name="text"><string/></property></widget>
+      <item row="4" column="0">
+       <widget class="QLabel" name="lbl_empty">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QPushButton" name="btn_add_order">
+        <property name="text">
+         <string>Ajouter la commande</string>
+        </property>
+       </widget>
       </item>
       <item row="3" column="1">
-       <widget class="QPushButton" name="btn_add_order">
-        <property name="text"><string>Ajouter la commande</string></property>
+       <widget class="QPushButton" name="pushButton">
+        <property name="text">
+         <string>PushButton</string>
+        </property>
        </widget>
       </item>
      </layout>
@@ -52,23 +94,51 @@
      <property name="selectionBehavior">
       <enum>QAbstractItemView::SelectRows</enum>
      </property>
-     <column><property name="text"><string>Produit</string></property></column>
-     <column><property name="text"><string>Heure début</string></property></column>
-     <column><property name="text"><string>Heure fin</string></property></column>
-     <column><property name="text"><string>Coût énergie (€)</string></property></column>
-     <column><property name="text"><string>Date</string></property></column>
+     <column>
+      <property name="text">
+       <string>Produit</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Heure début</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Heure fin</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Coût énergie (€)</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Date</string>
+      </property>
+     </column>
     </widget>
    </item>
    <item>
     <widget class="QGroupBox" name="grp_extra_email">
-     <property name="title"><string>Envoyer le planning complet à une adresse supplémentaire</string></property>
+     <property name="title">
+      <string>Envoyer le planning complet à une adresse supplémentaire</string>
+     </property>
      <layout class="QFormLayout" name="form_extra">
       <item row="0" column="0">
-       <widget class="QLabel" name="lbl_extra_email"><property name="text"><string>Adresse email :</string></property></widget>
+       <widget class="QLabel" name="lbl_extra_email">
+        <property name="text">
+         <string>Adresse email :</string>
+        </property>
+       </widget>
       </item>
       <item row="0" column="1">
        <widget class="QLineEdit" name="inp_extra_email">
-        <property name="placeholderText"><string>ex: responsable@entreprise.com (optionnel)</string></property>
+        <property name="placeholderText">
+         <string>ex: responsable@entreprise.com (optionnel)</string>
+        </property>
        </widget>
       </item>
      </layout>
@@ -78,30 +148,42 @@
     <layout class="QHBoxLayout" name="btn_row">
      <item>
       <widget class="QPushButton" name="btn_refresh">
-       <property name="text"><string>Rafraîchir</string></property>
+       <property name="text">
+        <string>Rafraîchir</string>
+       </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="btn_delete">
-       <property name="text"><string>Supprimer la commande sélectionnée</string></property>
+       <property name="text">
+        <string>Supprimer la commande sélectionnée</string>
+       </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="btn_calc">
-       <property name="text"><string>Calculer les coûts</string></property>
+       <property name="text">
+        <string>Calculer les coûts</string>
+       </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="btn_email">
-       <property name="text"><string>Envoyer les plannings par email</string></property>
+       <property name="text">
+        <string>Envoyer les plannings par email</string>
+       </property>
       </widget>
      </item>
     </layout>
    </item>
    <item>
     <widget class="QLabel" name="lbl_total">
-     <property name="text"><string/></property>
-     <property name="alignment"><set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set></property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
     </widget>
    </item>
   </layout>
