@@ -10,11 +10,16 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+# MIMEMultipart : crée la structure générale du message — c'est comme l'enveloppe qui contiendra tout
+# MIMEText : représente le contenu texte du message — c'est la lettre à l'intérieur de l'enveloppe
+
 import config
 
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT   = 587
 
+# SMTP_SERVER : l'adresse du serveur d'envoi de Gmail
+# SMTP_PORT : le numéro de port utilisé pour la connexion. Le port 587 est le standard pour les connexions sécurisées avec TLS
 
 def envoyer_email(to_email, subject, body):
     """
@@ -32,6 +37,9 @@ def envoyer_email(to_email, subject, body):
     msg["To"]      = to_email
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain", "utf-8"))
+
+# "plain" signifie que c'est du texte brut — pas de HTML, pas de mise en forme
+# "utf-8" est l'encodage utilisé, ce qui permet d'écrire des caractères spéciaux comme les accents français
 
     try:
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:

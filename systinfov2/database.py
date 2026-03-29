@@ -146,6 +146,11 @@ def modifier_machine(machine_id, name, power_w, operator_name, operator_email, f
     conn.commit()
     conn.close()
 
+# WHERE id=? : très important — sans cette condition, toutes les machines seraient modifiées. Ici on cible uniquement la machine dont l'id correspond
+# Remarque : il n'y a pas de return ici car on n'a pas besoin de récupérer quoi que ce soit après une modification
+
+
+
 
 def supprimer_machine(machine_id):
     """Supprime une machine. Les étapes qui l'utilisent passent à machine_id=NULL."""

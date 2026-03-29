@@ -5,7 +5,7 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import QWidget, QMessageBox
 from PyQt6.QtCore import QDate, QThread, QTimer, pyqtSignal
 
-import matplotlib
+import matplotlib #librairie pour graph
 matplotlib.use("QtAgg")
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -31,6 +31,9 @@ class PriceWorker(QThread):
         except Exception as e:
             self.error.emit(str(e))
 
+# C'est une classe très importante à comprendre. Voici pourquoi elle existe :
+# Quand on appelle l'API ENTSO-E, ça peut prendre plusieurs secondes. Si on faisait ça directement dans le code principal, toute la fenêtre se figerait pendant ce temps — l'utilisateur ne pourrait plus rien faire.
+# QThread permet de lancer ce téléchargement dans un fil d'exécution séparé, en parallèle, sans bloquer l'interface :
 
 class SimpleEmailWorker(QThread):
     finished = pyqtSignal(bool, str)

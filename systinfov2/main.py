@@ -26,11 +26,9 @@ class MainWindow(QMainWindow):
         id_form = QHBoxLayout(id_box)
         id_form.addWidget(QLabel("Nom / Entreprise :"))
         self.inp_manager_name = QLineEdit()
-        self.inp_manager_name.setPlaceholderText("ex: Jean Dupont — Voodoo Bakery")
         id_form.addWidget(self.inp_manager_name)
         id_form.addWidget(QLabel("Email :"))
         self.inp_manager_email = QLineEdit()
-        self.inp_manager_email.setPlaceholderText("ex: responsable@voodoo.be")
         id_form.addWidget(self.inp_manager_email)
 
         # Onglets
@@ -70,7 +68,7 @@ class MainWindow(QMainWindow):
             return
         machines = [
             ("Pétrin industriel",       3000,  "Ahmed Benali",  "ahmed.benali@voodoo.be",  5.0),
-            ("Four tunnel",             15000, "Sophie Dupont", "sophie.dupont@voodoo.be", 20.0),
+            ("Four tunnel",             1500, "Sophie Dupont", "sophie.dupont@voodoo.be", 20.0),
             ("Chambre de fermentation", 500,   "Ahmed Benali",  "ahmed.benali@voodoo.be",  2.0),
             ("Trancheuse-emballeuse",   800,   "Marc Lecomte",  "marc.lecomte@voodoo.be",  3.0),
         ]
@@ -106,7 +104,7 @@ class MainWindow(QMainWindow):
             QHeaderView::section { background-color: #e8c99a; padding: 4px; border: 1px solid #d4a96a; }
             QGroupBox { border: 1px solid #d4a96a; border-radius: 4px; margin-top: 10px; padding-top: 10px; }
             QGroupBox::title { subcontrol-origin: margin; left: 8px; font-weight: bold; color: #7a4010; }
-            QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QTimeEdit, QDateEdit { background-color: white; border: 1px solid #d4a96a; border-radius: 3px; padding: 3px 6px; }
+            QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QTimeEdit, QDateEdit { background-color: white; border: 1x solid #d4a96a; border-radius: 3px; padding: 3px 6px; }
             QListWidget { background-color: white; border: 1px solid #d4a96a; }
         """)
 
@@ -116,3 +114,4 @@ if __name__ == "__main__":
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
+p
