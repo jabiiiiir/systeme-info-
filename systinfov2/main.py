@@ -18,8 +18,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Voodoo Production Manager")
         self.resize(1100, 700)
 
-        db.create_all_tables()
-        self._seed_demo_data()
+        db.creer_tables()
+        self._charger_demo()
 
         # Barre d'identification
         id_box = QGroupBox("Identification")
@@ -35,13 +35,13 @@ class MainWindow(QMainWindow):
 
         # Onglets
         tabs = QTabWidget()
-        self.prices_tab = PricesTab(get_manager_info=self._get_manager_info)
+        self.prices_tab = PricesTab(get_manager_info=self._infos_responsable)
         self.config_tab = ConfigTab()
-        self.orders_tab = OrdersTab(self.prices_tab, get_manager_info=self._get_manager_info)
+        self.orders_tab = OrdersTab(self.prices_tab, get_manager_info=self._infos_responsable)
         tabs.addTab(self.config_tab,  "Configuration")
         tabs.addTab(self.prices_tab,  "Prix Électricité")
         tabs.addTab(self.orders_tab,  "Commandes")
-        tabs.currentChanged.connect(self._on_tab_change)
+        tabs.currentChanged.connect(self._changement_onglet)
 
         central = QWidget()
         layout  = QVBoxLayout(central)
@@ -52,21 +52,21 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         self._tabs = tabs
 
-        self._apply_stylesheet()
+        self._appliquer_style()
 
-    def _get_manager_info(self):
+    def _infos_responsable(self):
         return (
             self.inp_manager_name.text().strip(),
             self.inp_manager_email.text().strip(),
         )
 
-    def _on_tab_change(self, index):
+    def _changement_onglet(self, index):
         if index == 2:
-            self.orders_tab.refresh_product_combo()
-            self.orders_tab._refresh_orders()
+            self.orders_tab.actualiser_combo_produits()
+            self.orders_tab._actualiser_commandes()
 
-    def _seed_demo_data(self):
-        if db.select_machines():
+    def _charger_demo(self):
+        if db.lister_machines():
             return
         machines = [
             ("Pétrin industriel",       3000,  "Ahmed Benali",  "ahmed.benali@voodoo.be",  5.0),
@@ -76,7 +76,7 @@ class MainWindow(QMainWindow):
         ]
         ids = {}
         for name, power, oper, email, fixed in machines:
-            ids[name] = db.insert_machine(name, power, oper, email, fixed)
+            ids[name] = db.ajouter_machine(name, power, oper, email, fixed)
 
         products_tasks = {
             "Pain blanc":       [(ids["Pétrin industriel"], 20), (ids["Chambre de fermentation"], 60), (ids["Four tunnel"], 30), (ids["Trancheuse-emballeuse"], 10)],
@@ -85,11 +85,11 @@ class MainWindow(QMainWindow):
             "Pain de campagne": [(ids["Pétrin industriel"], 25), (ids["Chambre de fermentation"], 75), (ids["Four tunnel"], 40)],
         }
         for prod_name, steps in products_tasks.items():
-            p_id = db.insert_product(prod_name)
+            p_id = db.ajouter_produit(prod_name)
             for order, (machine_id, duration) in enumerate(steps, start=1):
-                db.insert_task(p_id, machine_id, duration, order)
+                db.ajouter_etape(p_id, machine_id, duration, order)
 
-    def _apply_stylesheet(self):
+    def _appliquer_style(self):
         self.setStyleSheet("""
             QMainWindow, QWidget {
                 background-color: #fdf6ec;

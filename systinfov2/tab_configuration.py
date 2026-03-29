@@ -19,16 +19,16 @@ class MachinesTab(QWidget):
         self._selected_id = None
         uic.loadUi(os.path.join(_UI_DIR, "machines_tab.ui"), self)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.table.selectionModel().selectionChanged.connect(self._on_select)
-        self.btn_add.clicked.connect(self._add)
-        self.btn_update.clicked.connect(self._update)
-        self.btn_delete.clicked.connect(self._delete)
-        self.btn_clear.clicked.connect(self._clear_form)
-        self.refresh()
+        self.table.selectionModel().selectionChanged.connect(self._sur_selection)
+        self.btn_add.clicked.connect(self._ajouter)
+        self.btn_update.clicked.connect(self._modifier)
+        self.btn_delete.clicked.connect(self._supprimer)
+        self.btn_clear.clicked.connect(self._vider_formulaire)
+        self.actualiser()
 
-    def refresh(self):
+    def actualiser(self):
         self.table.setRowCount(0)
-        for row in db.select_machines():
+        for row in db.lister_machines():
             m_id, name, power, oper, email, fixed = row
             r = self.table.rowCount()
             self.table.insertRow(r)
@@ -39,7 +39,7 @@ class MachinesTab(QWidget):
             self.table.setItem(r, 4, QTableWidgetItem(str(fixed)))
             self.table.item(r, 0).setData(Qt.ItemDataRole.UserRole, m_id)
 
-    def _on_select(self):
+    def _sur_selection(self):
         rows = self.table.selectionModel().selectedRows()
         if not rows:
             return
@@ -51,16 +51,16 @@ class MachinesTab(QWidget):
         self.inp_email.setText(self.table.item(r, 3).text())
         self.inp_fixed.setValue(float(self.table.item(r, 4).text()))
 
-    def _add(self):
+    def _ajouter(self):
         name = self.inp_name.text().strip()
         if not name:
             QMessageBox.warning(self, "Champ manquant", "Le nom est obligatoire.")
             return
-        db.insert_machine(name, self.inp_power.value(), self.inp_oper.text().strip(), self.inp_email.text().strip(), self.inp_fixed.value())
-        self._clear_form()
-        self.refresh()
+        db.ajouter_machine(name, self.inp_power.value(), self.inp_oper.text().strip(), self.inp_email.text().strip(), self.inp_fixed.value())
+        self._vider_formulaire()
+        self.actualiser()
 
-    def _update(self):
+    def _modifier(self):
         if self._selected_id is None:
             QMessageBox.warning(self, "Sélection requise", "Sélectionnez d'abord une machine.")
             return
@@ -68,21 +68,21 @@ class MachinesTab(QWidget):
         if not name:
             QMessageBox.warning(self, "Champ manquant", "Le nom est obligatoire.")
             return
-        db.update_machine(self._selected_id, name, self.inp_power.value(), self.inp_oper.text().strip(), self.inp_email.text().strip(), self.inp_fixed.value())
-        self._clear_form()
-        self.refresh()
+        db.modifier_machine(self._selected_id, name, self.inp_power.value(), self.inp_oper.text().strip(), self.inp_email.text().strip(), self.inp_fixed.value())
+        self._vider_formulaire()
+        self.actualiser()
 
-    def _delete(self):
+    def _supprimer(self):
         if self._selected_id is None:
             QMessageBox.warning(self, "Sélection requise", "Sélectionnez d'abord une machine.")
             return
         reply = QMessageBox.question(self, "Confirmer", "Supprimer cette machine ?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
-            db.delete_machine(self._selected_id)
-            self._clear_form()
-            self.refresh()
+            db.supprimer_machine(self._selected_id)
+            self._vider_formulaire()
+            self.actualiser()
 
-    def _clear_form(self):
+    def _vider_formulaire(self):
         self._selected_id = None
         self.inp_name.clear()
         self.inp_power.setValue(0)
@@ -99,24 +99,24 @@ class ProductsTab(QWidget):
         self._current_product_id = None
         uic.loadUi(os.path.join(_UI_DIR, "products_tab.ui"), self)
         self.table_tasks.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.list_products.currentItemChanged.connect(self._on_product_select)
-        self.btn_add_prod.clicked.connect(self._add_product)
-        self.btn_ren_prod.clicked.connect(self._rename_product)
-        self.btn_del_prod.clicked.connect(self._delete_product)
-        self.btn_add_step.clicked.connect(self._add_task)
-        self.btn_del_step.clicked.connect(self._delete_task)
+        self.list_products.currentItemChanged.connect(self._sur_selection_produit)
+        self.btn_add_prod.clicked.connect(self._ajouter_produit)
+        self.btn_ren_prod.clicked.connect(self._renommer_produit)
+        self.btn_del_prod.clicked.connect(self._supprimer_produit)
+        self.btn_add_step.clicked.connect(self._ajouter_etape)
+        self.btn_del_step.clicked.connect(self._supprimer_etape)
         self.splitter.setStretchFactor(0, 1)
         self.splitter.setStretchFactor(1, 2)
-        self.refresh_products()
+        self.actualiser_produits()
 
-    def refresh_products(self):
+    def actualiser_produits(self):
         self.list_products.clear()
-        for p_id, p_name in db.select_products():
+        for p_id, p_name in db.lister_produits():
             item = QListWidgetItem(p_name)
             item.setData(Qt.ItemDataRole.UserRole, p_id)
             self.list_products.addItem(item)
 
-    def _on_product_select(self, current, _previous):
+    def _sur_selection_produit(self, current, _previous):
         if current is None:
             self._current_product_id = None
             self.table_tasks.setRowCount(0)
@@ -124,18 +124,18 @@ class ProductsTab(QWidget):
             return
         self._current_product_id = current.data(Qt.ItemDataRole.UserRole)
         self.inp_prod_name.setText(current.text())
-        self._refresh_tasks()
+        self._actualiser_etapes()
 
-    def _add_product(self):
+    def _ajouter_produit(self):
         name = self.inp_prod_name.text().strip()
         if not name:
             QMessageBox.warning(self, "Champ manquant", "Entrez un nom de produit.")
             return
-        db.insert_product(name)
+        db.ajouter_produit(name)
         self.inp_prod_name.clear()
-        self.refresh_products()
+        self.actualiser_produits()
 
-    def _rename_product(self):
+    def _renommer_produit(self):
         if self._current_product_id is None:
             QMessageBox.warning(self, "Sélection requise", "Sélectionnez d'abord un produit à renommer.")
             return
@@ -143,26 +143,26 @@ class ProductsTab(QWidget):
         if not name:
             QMessageBox.warning(self, "Champ manquant", "Entrez le nouveau nom du produit.")
             return
-        db.update_product(self._current_product_id, name)
-        self.refresh_products()
+        db.modifier_produit(self._current_product_id, name)
+        self.actualiser_produits()
 
-    def _delete_product(self):
+    def _supprimer_produit(self):
         item = self.list_products.currentItem()
         if item is None:
             QMessageBox.warning(self, "Sélection requise", "Sélectionnez un produit.")
             return
         reply = QMessageBox.question(self, "Confirmer", f"Supprimer « {item.text()} » et toutes ses étapes ?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
-            db.delete_product(item.data(Qt.ItemDataRole.UserRole))
+            db.supprimer_produit(item.data(Qt.ItemDataRole.UserRole))
             self._current_product_id = None
             self.table_tasks.setRowCount(0)
-            self.refresh_products()
+            self.actualiser_produits()
 
-    def _refresh_tasks(self):
+    def _actualiser_etapes(self):
         self.table_tasks.setRowCount(0)
         if self._current_product_id is None:
             return
-        for row in db.select_tasks_for_product(self._current_product_id):
+        for row in db.lister_etapes_produit(self._current_product_id):
             t_id, step_order, machine_name, duration_min, _, power_w, *_ = row
             r = self.table_tasks.rowCount()
             self.table_tasks.insertRow(r)
@@ -172,30 +172,30 @@ class ProductsTab(QWidget):
             self.table_tasks.setItem(r, 3, QTableWidgetItem(str(power_w)))
             self.table_tasks.item(r, 0).setData(Qt.ItemDataRole.UserRole, t_id)
 
-    def refresh_machine_combo(self):
+    def actualiser_combo_machines(self):
         self.cmb_machine.clear()
         self.cmb_machine.addItem("Manuel / Pause", None)
-        for m_id, m_name, *_ in db.select_machines():
+        for m_id, m_name, *_ in db.lister_machines():
             self.cmb_machine.addItem(m_name, m_id)
 
-    def _add_task(self):
+    def _ajouter_etape(self):
         if self._current_product_id is None:
             QMessageBox.warning(self, "Sélection requise", "Sélectionnez d'abord un produit.")
             return
         machine_id = self.cmb_machine.currentData()
         duration   = self.spn_duration.value()
-        step_order = db.get_next_step_order(self._current_product_id)
-        db.insert_task(self._current_product_id, machine_id, duration, step_order)
-        self._refresh_tasks()
+        step_order = db.prochain_ordre_etape(self._current_product_id)
+        db.ajouter_etape(self._current_product_id, machine_id, duration, step_order)
+        self._actualiser_etapes()
 
-    def _delete_task(self):
+    def _supprimer_etape(self):
         rows = self.table_tasks.selectionModel().selectedRows()
         if not rows:
             QMessageBox.warning(self, "Sélection requise", "Sélectionnez une étape à supprimer.")
             return
         t_id = self.table_tasks.item(rows[0].row(), 0).data(Qt.ItemDataRole.UserRole)
-        db.delete_task(t_id)
-        self._refresh_tasks()
+        db.supprimer_etape(t_id)
+        self._actualiser_etapes()
 
 
 class ConfigTab(QWidget):
@@ -208,13 +208,13 @@ class ConfigTab(QWidget):
         self.products_tab = ProductsTab()
         tabs.addTab(self.machines_tab, "Machines")
         tabs.addTab(self.products_tab, "Produits")
-        tabs.currentChanged.connect(self._on_sub_tab_change)
+        tabs.currentChanged.connect(self._changement_sous_onglet)
         layout.addWidget(tabs)
         self._tabs = tabs
 
-    def _on_sub_tab_change(self, index):
+    def _changement_sous_onglet(self, index):
         if index == 1:
-            self.products_tab.refresh_machine_combo()
-            self.products_tab.refresh_products()
+            self.products_tab.actualiser_combo_machines()
+            self.products_tab.actualiser_produits()
         if index == 0:
-            self.machines_tab.refresh()
+            self.machines_tab.actualiser()

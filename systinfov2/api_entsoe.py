@@ -18,7 +18,7 @@ except ImportError:
 import config
 
 
-def fetch_day_ahead_prices(date=None):
+def recuperer_prix_journaliers(date=None):
     """
     Récupère les prix day-ahead du marché belge pour une date donnée.
 
@@ -49,12 +49,12 @@ def fetch_day_ahead_prices(date=None):
     return prices
 
 
-def get_price_at(prices, dt):
+def obtenir_prix_a_instant(prices, dt):
     """
     Retourne le prix de l'électricité (EUR/MWh) à un instant donné.
 
     Paramètres :
-        prices : pandas.Series retourné par fetch_day_ahead_prices()
+        prices : pandas.Series retourné par recuperer_prix_journaliers()
         dt     : datetime (naïf ou avec fuseau horaire)
 
     Retourne 0.0 si les prix sont indisponibles.
@@ -78,7 +78,7 @@ def get_price_at(prices, dt):
     return float(valid.iloc[-1])
 
 
-def get_negative_prices(prices):
+def obtenir_prix_negatifs(prices):
     """
     Retourne un pandas.Series contenant uniquement les prix négatifs.
     Retourne une Series vide si aucun prix négatif.

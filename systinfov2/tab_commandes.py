@@ -29,9 +29,9 @@ class EmailWorker(QThread):
             if not op_email:
                 continue
             subject = f"Planning de production du {self.order_date}"
-            body    = email_sender.build_operator_schedule(op_name, lines)
+            body    = email_sender.construire_planning_operateur(op_name, lines)
             try:
-                if email_sender.send_email(op_email, subject, body):
+                if email_sender.envoyer_email(op_email, subject, body):
                     sent += 1
                 else:
                     errors.append(f"{op_name} <{op_email}> : échec inconnu")
@@ -51,7 +51,7 @@ class SimpleEmailWorker(QThread):
 
     def run(self):
         try:
-            ok = email_sender.send_email(self.to_email, self.subject, self.body)
+            ok = email_sender.envoyer_email(self.to_email, self.subject, self.body)
             self.finished.emit(ok, "" if ok else "Échec inconnu")
         except Exception as e:
             self.finished.emit(False, str(e))
@@ -69,27 +69,27 @@ class OrdersTab(QWidget):
         font = self.lbl_total.font()
         font.setBold(True)
         self.lbl_total.setFont(font)
-        self.btn_add_order.clicked.connect(self._add_order)
-        self.btn_delete.clicked.connect(self._delete_order)
-        self.btn_calc.clicked.connect(self._calculate_costs)
-        self.btn_email.clicked.connect(self._send_emails)
-        self.btn_refresh.clicked.connect(self._refresh_orders)
-        self.pushButton.clicked.connect(self._on_push_button)
-        self._refresh_orders()
+        self.btn_add_order.clicked.connect(self._ajouter_commande)
+        self.btn_delete.clicked.connect(self._supprimer_commande)
+        self.btn_calc.clicked.connect(self._calculer_couts)
+        self.btn_email.clicked.connect(self._envoyer_emails)
+        self.btn_refresh.clicked.connect(self._actualiser_commandes)
+        self.pushButton.clicked.connect(self._bouton_nouveau)
+        self._actualiser_commandes()
 
-    def _on_push_button(self):
+    def _bouton_nouveau(self):
         """Action du nouveau bouton ajouté via Qt Designer."""
         QMessageBox.information(self, "Nouveau bouton", "Ce bouton est prêt à être configuré !")
 
-    def refresh_product_combo(self):
+    def actualiser_combo_produits(self):
         self.cmb_product.clear()
-        for p_id, p_name in db.select_products():
+        for p_id, p_name in db.lister_produits():
             self.cmb_product.addItem(p_name, p_id)
 
-    def _refresh_orders(self):
+    def _actualiser_commandes(self):
         self.table.setRowCount(0)
         order_date = self.date_order.date().toString("yyyy-MM-dd")
-        for row in db.select_orders_for_date(order_date):
+        for row in db.lister_commandes_du_jour(order_date):
             o_id, p_name, start_time, p_id = row
             r = self.table.rowCount()
             self.table.insertRow(r)
@@ -102,14 +102,14 @@ class OrdersTab(QWidget):
             self.table.item(r, 1).setData(Qt.ItemDataRole.UserRole, p_id)
         self.lbl_total.setText("")
 
-    def _add_order(self):
+    def _ajouter_commande(self):
         if self.cmb_product.count() == 0:
             QMessageBox.warning(self, "Aucun produit", "Ajoutez d'abord des produits dans la configuration.")
             return
         product_id = self.cmb_product.currentData()
         start_time = self.time_start.time().toString("HH:mm")
         order_date = self.date_order.date().toString("yyyy-MM-dd")
-        tasks      = db.select_tasks_for_product(product_id)
+        tasks      = db.lister_etapes_produit(product_id)
         total_min  = sum(t[3] for t in tasks)
         start_dt   = datetime.strptime(f"{order_date} {start_time}", "%Y-%m-%d %H:%M")
         end_dt     = start_dt + timedelta(minutes=total_min)
@@ -135,8 +135,8 @@ class OrdersTab(QWidget):
                     self._timing_worker.start()
             return
 
-        db.insert_order(product_id, start_time, order_date)
-        self._refresh_orders()
+        db.ajouter_commande(product_id, start_time, order_date)
+        self._actualiser_commandes()
 
         if self._get_manager_info:
             manager_name, manager_email = self._get_manager_info()
@@ -155,17 +155,17 @@ class OrdersTab(QWidget):
                 self._order_worker = SimpleEmailWorker(manager_email, subject, body)
                 self._order_worker.start()
 
-    def _delete_order(self):
+    def _supprimer_commande(self):
         rows = self.table.selectionModel().selectedRows()
         if not rows:
             QMessageBox.warning(self, "Sélection requise", "Sélectionnez une commande.")
             return
         o_id = self.table.item(rows[0].row(), 0).data(Qt.ItemDataRole.UserRole)
-        db.delete_order(o_id)
-        self._refresh_orders()
+        db.supprimer_commande(o_id)
+        self._actualiser_commandes()
 
-    def _calculate_costs(self):
-        prices     = self._prices_tab.get_prices()
+    def _calculer_couts(self):
+        prices     = self._prices_tab.prix_actuels()
         order_date = self.date_order.date().toString("yyyy-MM-dd")
         total_cost = 0.0
 
@@ -173,13 +173,13 @@ class OrdersTab(QWidget):
             p_id       = self.table.item(r, 1).data(Qt.ItemDataRole.UserRole)
             start_time = self.table.item(r, 1).text()
             current_dt = datetime.strptime(f"{order_date} {start_time}", "%Y-%m-%d %H:%M")
-            tasks      = db.select_tasks_for_product(p_id)
+            tasks      = db.lister_etapes_produit(p_id)
             order_cost = 0.0
 
             for task in tasks:
                 _, _, _, duration_min, _, power_w, _, _, fixed_cost = task
                 energy_mwh  = (power_w / 1_000_000) * (duration_min / 60)
-                price       = api_entsoe.get_price_at(prices, current_dt) if prices is not None else 0.0
+                price       = api_entsoe.obtenir_prix_a_instant(prices, current_dt) if prices is not None else 0.0
                 order_cost += energy_mwh * price + fixed_cost
                 current_dt += timedelta(minutes=duration_min)
 
@@ -195,9 +195,9 @@ class OrdersTab(QWidget):
         if prices is None:
             QMessageBox.information(self, "Prix non chargés", "Les prix d'électricité n'ont pas été chargés.\nLes coûts énergétiques sont calculés à 0 €/MWh.\nChargez les prix dans l'onglet « Prix Électricité ».")
 
-    def _send_emails(self):
+    def _envoyer_emails(self):
         order_date = self.date_order.date().toString("yyyy-MM-dd")
-        orders = db.select_orders_for_date(order_date)
+        orders = db.lister_commandes_du_jour(order_date)
         if not orders:
             QMessageBox.information(self, "Aucune commande", "Aucune commande à envoyer.")
             return
@@ -205,7 +205,7 @@ class OrdersTab(QWidget):
         schedules: dict = {}
         for o_id, p_name, start_time, p_id in orders:
             current_dt = datetime.strptime(f"{order_date} {start_time}", "%Y-%m-%d %H:%M").replace(tzinfo=_TZ_CET)
-            for task in db.select_tasks_for_product(p_id):
+            for task in db.lister_etapes_produit(p_id):
                 _, step_order, machine_name, duration_min, _, _, op_name, op_email, _ = task
                 if not op_name and not op_email:
                     current_dt += timedelta(minutes=duration_min)
@@ -238,10 +238,10 @@ class OrdersTab(QWidget):
         self.btn_email.setEnabled(False)
         self.btn_email.setText("Envoi en cours…")
         self._email_worker = EmailWorker(schedules, order_date)
-        self._email_worker.finished.connect(self._on_emails_sent)
+        self._email_worker.finished.connect(self._emails_envoyes)
         self._email_worker.start()
 
-    def _on_emails_sent(self, sent, errors):
+    def _emails_envoyes(self, sent, errors):
         self.btn_email.setEnabled(True)
         self.btn_email.setText("Envoyer les plannings par email")
         msg = f"Emails envoyés avec succès : {sent}"

@@ -27,7 +27,7 @@ class PriceWorker(QThread):
 
     def run(self):
         try:
-            self.finished.emit(api_entsoe.fetch_day_ahead_prices(self.date))
+            self.finished.emit(api_entsoe.recuperer_prix_journaliers(self.date))
         except Exception as e:
             self.error.emit(str(e))
 
@@ -43,7 +43,7 @@ class SimpleEmailWorker(QThread):
 
     def run(self):
         try:
-            ok = email_sender.send_email(self.to_email, self.subject, self.body)
+            ok = email_sender.envoyer_email(self.to_email, self.subject, self.body)
             self.finished.emit(ok, "" if ok else "Échec inconnu")
         except Exception as e:
             self.finished.emit(False, str(e))
@@ -60,44 +60,44 @@ class PricesTab(QWidget):
         self.figure = Figure(figsize=(8, 4))
         self.canvas = FigureCanvas(self.figure)
         self.canvas_container.layout().addWidget(self.canvas)
-        self.btn_load.clicked.connect(self.load_prices)
-        self.btn_check_threshold.clicked.connect(self._check_price_threshold)
-        QTimer.singleShot(100, self._auto_load_prices)
+        self.btn_load.clicked.connect(self.charger_prix)
+        self.btn_check_threshold.clicked.connect(self._verifier_seuil)
+        QTimer.singleShot(100, self._chargement_auto_prix)
 
-    def _auto_load_prices(self):
+    def _chargement_auto_prix(self):
         date_str = self.date_edit.date().toString("yyyy-MM-dd")
-        cached = db.select_electricity_prices(date_str)
+        cached = db.charger_prix_electricite(date_str)
         if cached is not None:
             self.prices = cached
             self.lbl_info.setText("Prix chargés depuis le cache local.")
-            self._draw_chart()
+            self._dessiner_graphique()
         else:
-            self.load_prices()
+            self.charger_prix()
 
-    def load_prices(self):
+    def charger_prix(self):
         qdate  = self.date_edit.date()
         target = datetime(qdate.year(), qdate.month(), qdate.day())
         self.btn_load.setEnabled(False)
         self.lbl_info.setText("Chargement en cours…")
         self._worker = PriceWorker(target)
-        self._worker.finished.connect(self._on_prices_loaded)
-        self._worker.error.connect(self._on_prices_error)
+        self._worker.finished.connect(self._prix_charges)
+        self._worker.error.connect(self._erreur_chargement)
         self._worker.start()
 
-    def _on_prices_loaded(self, prices):
+    def _prix_charges(self, prices):
         self.prices = prices
         date_str = self.date_edit.date().toString("yyyy-MM-dd")
-        db.upsert_electricity_prices(date_str, prices)
+        db.sauvegarder_prix_electricite(date_str, prices)
         self.btn_load.setEnabled(True)
-        self._draw_chart()
-        self._check_price_threshold()
+        self._dessiner_graphique()
+        self._verifier_seuil()
 
-    def _on_prices_error(self, message):
+    def _erreur_chargement(self, message):
         self.btn_load.setEnabled(True)
         self.lbl_info.setText("Échec du chargement.")
         QMessageBox.critical(self, "Erreur API", f"Impossible de récupérer les prix :\n{message}")
 
-    def _draw_chart(self):
+    def _dessiner_graphique(self):
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         times  = self.prices.index.to_pydatetime()
@@ -118,7 +118,7 @@ class PricesTab(QWidget):
         neg_count = int((self.prices < 0).sum())
         self.lbl_info.setText(f"Min : {mn:.2f} €/MWh   |   Max : {mx:.2f} €/MWh   |   Heures négatives : {neg_count}")
 
-    def _check_price_threshold(self):
+    def _verifier_seuil(self):
         if self.prices is None:
             QMessageBox.information(self, "Prix non chargés", "Chargez d'abord les prix avant de vérifier le seuil.")
             return
@@ -143,5 +143,5 @@ class PricesTab(QWidget):
                     self._alert_worker = SimpleEmailWorker(manager_email, subject, body)
                     self._alert_worker.start()
 
-    def get_prices(self):
+    def prix_actuels(self):
         return self.prices

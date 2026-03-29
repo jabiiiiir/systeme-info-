@@ -16,7 +16,7 @@ SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT   = 587
 
 
-def send_email(to_email, subject, body):
+def envoyer_email(to_email, subject, body):
     """
     Envoie un email en texte brut.
 
@@ -45,7 +45,7 @@ def send_email(to_email, subject, body):
         return False
 
 
-def build_operator_schedule(operator_name, schedule_lines):
+def construire_planning_operateur(operator_name, schedule_lines):
     """
     Construit le corps de l'email de planning destiné à un opérateur.
 
