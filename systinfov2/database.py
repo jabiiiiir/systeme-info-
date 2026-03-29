@@ -10,7 +10,8 @@
 # ==============================================================================
 
 import sqlite3
-
+# directement dans Python. Pas besoin d'installer quoi que ce soit en plus. Toutes les données de l'application (machines, produits, commandes…)
+# seront stockées dans un seul fichier sur le disque dur.
 DB_PATH = "voodoo.db"
 
 
@@ -84,7 +85,8 @@ def creer_tables():
 
     conn.commit()
     conn.close()
-
+# commit() valide et écrit toutes les modifications dans le fichier. Sans cette ligne, toutes les tables créées seraient perdues à la fermeture
+# close() ferme proprement la connexion et libère les ressources système
 
 # ==============================================================================
 # MACHINES
@@ -346,6 +348,6 @@ def charger_prix_electricite(date_str):
     conn.close()
     if not rows:
         return None
-    index  = pd.DatetimeIndex([pd.Timestamp(r[0]) for r in rows])
+    index  = pd.to_datetime([r[0] for r in rows], utc=True)
     values = [r[1] for r in rows]
     return pd.Series(values, index=index)

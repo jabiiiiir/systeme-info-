@@ -14,6 +14,7 @@ try:
     ENTSOE_AVAILABLE = True
 except ImportError:
     ENTSOE_AVAILABLE = False
+#Cela permet à l'application de démarrer quand même et d'afficher un message d'erreur clair plus tard.
 
 import config
 
@@ -70,6 +71,11 @@ def obtenir_prix_a_instant(prices, dt):
         ts = pd.Timestamp(dt).tz_convert("Europe/Brussels")
     except Exception:
         return 0.0
+#On convertit dt en timestamp avec le bon fuseau horaire. Deux cas sont gérés :
+
+# Si dt n'a pas de fuseau horaire, tz_localize lui en attribue un
+# Si dt en a déjà un, tz_localize lèverait une TypeError — dans ce cas on utilise tz_convert pour le convertir en heure belge
+# Si n'importe quoi d'autre plante, on retourne 0.0 par sécurité
 
     # Cherche le dernier intervalle de prix dont le début est <= ts
     valid = prices[prices.index <= ts]
@@ -77,6 +83,9 @@ def obtenir_prix_a_instant(prices, dt):
         return float(prices.iloc[0])   # premier prix disponible
     return float(valid.iloc[-1])
 
+# prices[prices.index <= ts] filtre la série pour ne garder que les prix dont l'heure est avant ou égale à ts
+# .iloc[-1] prend le dernier élément de cette liste filtrée — c'est donc le prix de la tranche horaire en cours
+# Si aucun prix n'est encore passé (la série filtrée est vide), on retourne le tout premier prix disponible avec prices.iloc[0]
 
 def obtenir_prix_negatifs(prices):
     """
