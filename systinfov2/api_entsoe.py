@@ -6,6 +6,7 @@
 # ==============================================================================
 
 import pandas as pd
+#: une librairie pour manipuler des tableaux de données. Ici on l'utilise pour stocker les prix sous forme de série temporelle (une valeur par heure).
 from datetime import datetime
 
 try:
