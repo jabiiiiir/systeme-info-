@@ -10,7 +10,8 @@ from PyQt6.QtCore import Qt
 import database
 
 _UI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui")
-
+#Construit le chemin vers le dossier ui qui contient les fichiers Qt Designer. Par exemple : "C:/projet/systinfov2/ui".
+#  Ce chemin est stocké dans _UI_DIR pour être réutilisé à plusieurs endroits.
 
 class MachinesTab(QWidget):
 
@@ -27,7 +28,7 @@ class MachinesTab(QWidget):
         self.actualiser()
 
     def actualiser(self):
-        self.table.setRowCount(0)
+        self.table.setRowCount(0) #vide complètement le tableau. Sans ça, chaque rafraîchissement ajouterait des lignes en double
         for ligne_db in database.lister_machines():
             id_machine, nom, puissance, operateur, email, fixe = ligne_db
             ligne = self.table.rowCount()
@@ -35,24 +36,25 @@ class MachinesTab(QWidget):
             self.table.setItem(ligne, 0, QTableWidgetItem(nom))
             self.table.setItem(ligne, 1, QTableWidgetItem(str(puissance)))
             self.table.setItem(ligne, 2, QTableWidgetItem(operateur or ""))
-            self.table.setItem(ligne, 3, QTableWidgetItem(email or ""))
+            self.table.setItem(ligne, 3, QTableWidgetItem(email or "")) #on affiche une chaîne vide plutôt que le mot "None
             self.table.setItem(ligne, 4, QTableWidgetItem(str(fixe)))
             self.table.item(ligne, 0).setData(Qt.ItemDataRole.UserRole, id_machine)
+#On cache l'id de la machine dans la cellule du nom. L'utilisateur ne le voit pas, mais le code peut le récupérer plus tard. C'est comme écrire un numéro au dos d'une carte — visible si on retourne la carte, invisible sinon. On en aura besoin pour modifier ou supprimer la bonne machine.
 
-    def _sur_selection(self):
-        lignes_selectionnees = self.table.selectionModel().selectedRows()
+    def _sur_selection(self): #selection tableau
+        lignes_selectionnees = self.table.selectionModel().selectedRows() 
         if not lignes_selectionnees:
             return
         ligne = lignes_selectionnees[0].row()
-        self._id_selectionne = self.table.item(ligne, 0).data(Qt.ItemDataRole.UserRole)
+        self._id_selectionne = self.table.item(ligne, 0).data(Qt.ItemDataRole.UserRole)#récupère l'id de la machine à partir de la cellule du nom, là où on l'avait caché
         self.inp_name.setText(self.table.item(ligne, 0).text())
         self.inp_power.setValue(float(self.table.item(ligne, 1).text()))
         self.inp_oper.setText(self.table.item(ligne, 2).text())
         self.inp_email.setText(self.table.item(ligne, 3).text())
-        self.inp_fixed.setValue(float(self.table.item(ligne, 4).text()))
+        self.inp_fixed.setValue(float(self.table.item(ligne, 4).text())) #remplissage auto 
 
     def _ajouter(self):
-        nom = self.inp_name.text().strip()
+        nom = self.inp_name.text().strip() #récupère le texte tapé dans le champ
         if not nom:
             QMessageBox.warning(self, "Champ manquant", "Le nom est obligatoire.")
             return
@@ -78,9 +80,12 @@ class MachinesTab(QWidget):
             return
         reponse = QMessageBox.question(self, "Confirmer", "Supprimer cette machine ?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reponse == QMessageBox.StandardButton.Yes:
-            database.supprimer_machine(self._id_selectionne)
+            database.supprimer_machine(self._id_selectionne) 
             self._vider_formulaire()
             self.actualiser()
+
+#Supprime la machine de la base. Grâce au ON DELETE SET NULL dans database.py, 
+#les étapes qui utilisaient cette machine ne sont pas supprimées — leur machine_id passe simplement à NULL
 
     def _vider_formulaire(self):
         self._id_selectionne = None
@@ -90,6 +95,7 @@ class MachinesTab(QWidget):
         self.inp_email.clear()
         self.inp_fixed.setValue(0)
         self.table.clearSelection()
+#désélectionne la ligne dans le tableau — visuellement elle n'est plus surlignée
 
 
 class ProductsTab(QWidget):
@@ -109,12 +115,18 @@ class ProductsTab(QWidget):
         self.splitter.setStretchFactor(1, 2)
         self.actualiser_produits()
 
+#Un splitter est une barre séparatrice que l'utilisateur peut glisser pour redimensionner deux zones côte à côte
+# setStretchFactor(0, 1) : la zone gauche (liste des produits) prend 1 part d'espace
+# setStretchFactor(1, 2) : la zone droite (tableau des étapes) prend 2 parts d'espace — donc deux fois plus large que la liste
+
     def actualiser_produits(self):
         self.list_products.clear()
         for id_produit, nom_produit in database.lister_produits():
             element = QListWidgetItem(nom_produit)
             element.setData(Qt.ItemDataRole.UserRole, id_produit)
             self.list_products.addItem(element)
+
+#Résultat visuel — une liste cliquable
 
     def _sur_selection_produit(self, element_courant, _precedent):
         if element_courant is None:
@@ -181,7 +193,7 @@ class ProductsTab(QWidget):
         if self._id_produit_courant is None:
             QMessageBox.warning(self, "Sélection requise", "Sélectionnez d'abord un produit.")
             return
-        id_machine  = self.cmb_machine.currentData()
+        id_machine  = self.cmb_machine.currentData() #récupère l'id caché de la machine sélectionnée dans la liste déroulante
         duree       = self.spn_duration.value()
         ordre_etape = database.prochain_ordre_etape(self._id_produit_courant)
         database.ajouter_etape(self._id_produit_courant, id_machine, duree, ordre_etape)

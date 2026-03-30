@@ -151,3 +151,4 @@ class PricesTab(QWidget):
 
     def prix_actuels(self):
         return self.prix
+#Elle est appelée par tab_commandes.py pour calculer les coûts des commandes.
