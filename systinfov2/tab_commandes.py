@@ -67,24 +67,20 @@ class OrdersTab(QWidget):
         self.date_order.setDate(QDate.currentDate())
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         police = self.lbl_total.font()
-        police.setBold(True)
-        self.lbl_total.setFont(police)
         self.btn_add_order.clicked.connect(self._ajouter_commande)
         self.btn_delete.clicked.connect(self._supprimer_commande)
         self.btn_calc.clicked.connect(self._calculer_couts)
         self.btn_email.clicked.connect(self._envoyer_emails)
         self.btn_refresh.clicked.connect(self._actualiser_commandes)
-        self.pushButton.clicked.connect(self._bouton_nouveau)
         self._actualiser_commandes()
 
-    def _bouton_nouveau(self):
-        """Action du nouveau bouton ajouté via Qt Designer."""
-        QMessageBox.information(self, "Nouveau bouton", "Ce bouton est prêt à être configuré !")
 
     def actualiser_combo_produits(self):
         self.cmb_product.clear()
         for id_produit, nom_produit in database.lister_produits():
             self.cmb_product.addItem(nom_produit, id_produit)
+
+#Vide la liste déroulante des produits puis la remplit
 
     def _actualiser_commandes(self):
         self.table.setRowCount(0)
@@ -95,10 +91,10 @@ class OrdersTab(QWidget):
             self.table.insertRow(ligne)
             self.table.setItem(ligne, 0, QTableWidgetItem(nom_produit))
             self.table.setItem(ligne, 1, QTableWidgetItem(heure_debut))
-            self.table.setItem(ligne, 2, QTableWidgetItem("—"))
+            self.table.setItem(ligne, 2, QTableWidgetItem("—")) # pas encore calculée donc "—"
             self.table.setItem(ligne, 3, QTableWidgetItem("—"))
             self.table.setItem(ligne, 4, QTableWidgetItem(date_commande))
-            self.table.item(ligne, 0).setData(Qt.ItemDataRole.UserRole, id_commande)
+            self.table.item(ligne, 0).setData(Qt.ItemDataRole.UserRole, id_commande)#On cache l'id_produit dans la colonne 1
             self.table.item(ligne, 1).setData(Qt.ItemDataRole.UserRole, id_produit)
         self.lbl_total.setText("")
 
@@ -113,26 +109,10 @@ class OrdersTab(QWidget):
         total_minutes = sum(etape[3] for etape in etapes)
         dt_debut      = datetime.strptime(f"{date_commande} {heure_debut}", "%Y-%m-%d %H:%M")
         dt_fin        = dt_debut + timedelta(minutes=total_minutes)
+    #calcul du temps de la commande 
 
         if dt_fin.date() > dt_debut.date():
             QMessageBox.warning(self, "Dépassement de minuit", f"Ce produit dure {total_minutes} min et dépasse minuit.\nChoisissez une heure de début plus tôt.")
-            if self._get_manager_info:
-                nom_responsable, email_responsable = self._get_manager_info()
-                if email_responsable:
-                    nom_produit = self.cmb_product.currentText()
-                    sujet = f"[Alerte timing] {nom_produit} dépasse minuit — {date_commande}"
-                    corps = (
-                        f"Bonjour {nom_responsable},\n\n"
-                        f"La commande suivante ne sera pas terminée avant la fin de la journée :\n\n"
-                        f"  Produit     : {nom_produit}\n"
-                        f"  Date        : {date_commande}\n"
-                        f"  Heure début : {heure_debut}\n"
-                        f"  Durée tot.  : {total_minutes} min\n"
-                        f"  Fin prévue  : {dt_fin.strftime('%H:%M')} (le {dt_fin.strftime('%d/%m/%Y')})\n\n"
-                        "La commande n'a pas été enregistrée.\n\nVoodoo Production Manager"
-                    )
-                    self._worker_timing = SimpleEmailWorker(email_responsable, sujet, corps)
-                    self._worker_timing.start()
             return
 
         database.ajouter_commande(id_produit, heure_debut, date_commande)
