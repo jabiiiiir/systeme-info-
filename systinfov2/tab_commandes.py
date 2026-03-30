@@ -12,10 +12,10 @@ import api_entsoe
 import email_sender
 
 _FUSEAU_HORAIRE = ZoneInfo("Europe/Brussels")
-_UI_DIR         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui")
+_UI_DIR         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui") # : le chemin vers le dossier ui qui contient les fichiers Qt Designer. __file__ est le chemin du fichier actuel, os.path.dirname prend son dossier parent, et on y ajoute "ui"
 
 
-class EmailWorker(QThread):
+class EmailWorker(QThread): #on utilise un thread séparé pour envoyer les emails sans bloquer l'interface. Ce worker envoie les plannings à plusieurs opérateurs en même temps.
     finished = pyqtSignal(int, list)
 
     def __init__(self, plannings, date_commande):

@@ -16,7 +16,7 @@ class MachinesTab(QWidget):
 
     def __init__(self):
         super().__init__()
-        self._id_selectionne = None
+        self._id_selectionne = None #stocke l'id de la machine actuellement sélectionnée dans le tableau.
         uic.loadUi(os.path.join(_UI_DIR, "machines_tab.ui"), self)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.table.selectionModel().selectionChanged.connect(self._sur_selection)

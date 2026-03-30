@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QWidget, QMessageBox
 from PyQt6.QtCore import QDate, QThread, QTimer, pyqtSignal
 
 import matplotlib #librairie pour graph
-matplotlib.use("QtAgg")
+matplotlib.use("QtAgg")#utilise PyQt6 pour afficher tes graphiques
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -15,9 +15,11 @@ import api_entsoe
 import email_sender
 
 _UI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui")
+#Si tu lances le programme depuis un autre dossier (ex: python systinfov2/main.py depuis le bureau), 
+# le chemin relatif "ui" serait calculé depuis le bureau — et Python ne trouverait pas les fichiers.
+#  En ancrant le chemin à __file__, le dossier ui/ est toujours trouvé peu importe d'où le programme est lancé.
 
-
-class PriceWorker(QThread):
+class PriceWorker(QThread):  #on envoie un "assistant" télécharger les prix
     finished = pyqtSignal(object)
     error    = pyqtSignal(str)
 
@@ -31,9 +33,6 @@ class PriceWorker(QThread):
         except Exception as erreur:
             self.error.emit(str(erreur))
 
-# C'est une classe très importante à comprendre. Voici pourquoi elle existe :
-# Quand on appelle l'API ENTSO-E, ça peut prendre plusieurs secondes. Si on faisait ça directement dans le code principal, toute la fenêtre se figerait pendant ce temps — l'utilisateur ne pourrait plus rien faire.
-# QThread permet de lancer ce téléchargement dans un fil d'exécution séparé, en parallèle, sans bloquer l'interface :
 
 class SimpleEmailWorker(QThread):
     finished = pyqtSignal(bool, str)
