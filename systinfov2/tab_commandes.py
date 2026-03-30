@@ -207,10 +207,7 @@ class OrdersTab(QWidget):
             current_dt = datetime.strptime(f"{order_date} {start_time}", "%Y-%m-%d %H:%M").replace(tzinfo=_TZ_CET)
             for task in db.lister_etapes_produit(p_id):
                 _, step_order, machine_name, duration_min, _, _, op_name, op_email, _ = task
-                if not op_name and not op_email:
-                    current_dt += timedelta(minutes=duration_min)
-                    continue
-                key    = (op_name or "Inconnu", op_email or "")
+                key    = (op_name or "", op_email or "")
                 end_dt = current_dt + timedelta(minutes=duration_min)
                 line   = f"{p_name} — Étape {step_order} ({machine_name}) : {current_dt.strftime('%H:%M %Z')} → {end_dt.strftime('%H:%M %Z')} ({duration_min} min)"
                 schedules.setdefault(key, []).append(line)

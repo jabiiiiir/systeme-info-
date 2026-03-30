@@ -174,7 +174,6 @@ class ProductsTab(QWidget):
 
     def actualiser_combo_machines(self):
         self.cmb_machine.clear()
-        self.cmb_machine.addItem("Manuel / Pause", None)
         for m_id, m_name, *_ in db.lister_machines():
             self.cmb_machine.addItem(m_name, m_id)
 

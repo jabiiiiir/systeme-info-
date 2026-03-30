@@ -74,7 +74,7 @@ class MainWindow(QMainWindow):
         ]
         ids = {}
         for name, power, oper, email, fixed in machines:
-            ids[name] = db.ajouter_machine(name, power, oper, email, fixed)
+            ids[name] = db.ajouter_machine(name, power, oper, email, fixed )
 
         products_tasks = {
             "Pain blanc":       [(ids["Pétrin industriel"], 20), (ids["Chambre de fermentation"], 60), (ids["Four tunnel"], 30), (ids["Trancheuse-emballeuse"], 10)],

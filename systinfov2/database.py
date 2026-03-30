@@ -85,7 +85,8 @@ def creer_tables():
 
     conn.commit()
     conn.close()
-# commit() valide et écrit toutes les modifications dans le fichier. Sans cette ligne, toutes les tables créées seraient perdues à la fermeture
+# commit() valide et écrit toutes les modifications dans le fichier. Sans cette ligne,
+#  toutes les tables créées seraient perdues à la fermeture
 # close() ferme proprement la connexion et libère les ressources système
 
 # ==============================================================================
@@ -232,15 +233,15 @@ def lister_etapes_produit(product_id):
     c.execute("""
         SELECT t.id,
                t.step_order,
-               COALESCE(m.name,           'Manuel / Pause'),
+               m.name,
                t.duration_min,
                t.machine_id,
-               COALESCE(m.power_w,        0),
-               COALESCE(m.operator_name,  ''),
-               COALESCE(m.operator_email, ''),
-               COALESCE(m.fixed_cost,     0)
+               m.power_w,
+               m.operator_name,
+               m.operator_email,
+               m.fixed_cost
         FROM tasks t
-        LEFT JOIN machines m ON t.machine_id = m.id
+        JOIN machines m ON t.machine_id = m.id
         WHERE t.product_id = ?
         ORDER BY t.step_order
     """, (product_id,))

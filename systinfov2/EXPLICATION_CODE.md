@@ -106,12 +106,12 @@ C'est la plus complexe. Elle fait une **jointure SQL** entre `tasks` et `machine
 SELECT t.id, t.step_order, m.name, t.duration_min, t.machine_id,
        m.power_w, m.operator_name, m.operator_email, m.fixed_cost
 FROM tasks t
-LEFT JOIN machines m ON t.machine_id = m.id
+JOIN machines m ON t.machine_id = m.id
 WHERE t.product_id = ?
 ORDER BY t.step_order
 ```
 
-**LEFT JOIN** signifie : "prends chaque étape, et si elle a une machine associée, récupère les infos de cette machine. Sinon, mets NULL (ou 0 via COALESCE)."
+**JOIN** (inner join) signifie : "prends chaque étape et récupère les infos de sa machine. Chaque étape doit obligatoirement être liée à une machine — il n'existe pas d'étape sans machine."
 
 Résultat pour "Pain blanc" :
 ```
@@ -414,6 +414,7 @@ schedules = {}   # dictionnaire : (nom_opérateur, email) → [liste de lignes]
 
 for commande in orders:
     for etape in db.lister_etapes_produit(p_id):
+        # chaque étape a forcément une machine avec un opérateur
         key  = (op_name, op_email)
         line = "Pain blanc — Étape 1 (Pétrin) : 06:00 → 06:20 (20 min)"
         schedules.setdefault(key, []).append(line)
@@ -530,6 +531,5 @@ tab_configuration.py
 | **pandas.Series** | Liste de valeurs avec un index temporel (utilisé pour les prix)  |
 | **ENTSO-E**     | API européenne qui fournit les prix de l'électricité heure par heure |
 | **SMTP/TLS**    | Protocole sécurisé pour envoyer des emails (port 587 pour Gmail)    |
-| **LEFT JOIN**   | Requête SQL qui combine deux tables, même si certaines colonnes sont NULL |
-| **COALESCE**    | En SQL : retourne la première valeur non-NULL                       |
+| **JOIN**        | Requête SQL qui combine deux tables — les deux côtés doivent exister |
 | **MIMEMultipart** | Structure d'un email (enveloppe + contenu)                        |
