@@ -32,7 +32,8 @@ class PriceWorker(QThread):  #on envoie un "assistant" télécharger les prix
             self.finished.emit(api_entsoe.recuperer_prix_journaliers(self.date))
         except Exception as erreur:
             self.error.emit(str(erreur))
-
+#je donne la date à ce worker, il va faire le travail de récupérer les prix (potentiellement long) dans un thread séparé pour ne pas bloquer l'interface.
+#Quand il a fini, il émet un signal "finished" avec les prix récupérés, ou un signal "error" avec le message d'erreur s'il y a un problème.
 
 class SimpleEmailWorker(QThread):
     finished = pyqtSignal(bool, str)
@@ -50,6 +51,7 @@ class SimpleEmailWorker(QThread):
         except Exception as erreur:
             self.finished.emit(False, str(erreur))
 
+#Ce worker est utilisé pour envoyer un email d'alerte si le seuil de prix est franchi. Comme l'envoi d'email peut aussi prendre du temps, on le fait dans un thread séparé pour ne pas bloquer l'interface. Quand il a fini, il émet un signal "finished" avec un booléen indiquant si l'envoi a réussi, et un message d'erreur s'il y en a une 
 
 class PricesTab(QWidget):
 
@@ -57,14 +59,14 @@ class PricesTab(QWidget):
         super().__init__()
         self.prix              = None
         self._get_manager_info = get_manager_info
-        uic.loadUi(os.path.join(_UI_DIR, "prices_tab.ui"), self)
+        uic.loadUi(os.path.join(_UI_DIR, "prices_tab.ui"), self) #charge depuis qt designer
         self.date_edit.setDate(QDate.currentDate())
         self.graphique = Figure(figsize=(8, 4))
-        self.canevas   = FigureCanvas(self.graphique)
+        self.canevas   = FigureCanvas(self.graphique) #canvas = zone de dessin pour matplotlib
         self.canvas_container.layout().addWidget(self.canevas)
         self.btn_load.clicked.connect(self.charger_prix)
         self.btn_check_threshold.clicked.connect(self._verifier_seuil)
-        QTimer.singleShot(100, self._chargement_auto_prix)
+        QTimer.singleShot(100, self._chargement_auto_prix) #marge de temps
 
     def _chargement_auto_prix(self):
         chaine_date = self.date_edit.date().toString("yyyy-MM-dd")
@@ -79,7 +81,7 @@ class PricesTab(QWidget):
     def charger_prix(self):
         date_qt    = self.date_edit.date()
         date_cible = datetime(date_qt.year(), date_qt.month(), date_qt.day())
-        self.btn_load.setEnabled(False)
+        self.btn_load.setEnabled(False) # désactive le bouton pendant le chargement
         self.lbl_info.setText("Chargement en cours…")
         self._worker = PriceWorker(date_cible)
         self._worker.finished.connect(self._prix_charges)
@@ -99,6 +101,7 @@ class PricesTab(QWidget):
         self.lbl_info.setText("Échec du chargement.")
         QMessageBox.critical(self, "Erreur API", f"Impossible de récupérer les prix :\n{message}")
 
+#je peux effacer?
     def _dessiner_graphique(self):
         self.graphique.clear()
         ax       = self.graphique.add_subplot(111)
@@ -114,11 +117,12 @@ class PricesTab(QWidget):
         ax.set_title(f"Prix day-ahead — {self.date_edit.date().toString('dd/MM/yyyy')}")
         ax.grid(axis="y", linestyle=":", alpha=0.5)
         self.graphique.tight_layout()
-        self.canevas.draw()
+        self.canevas.draw() #graph 
         minimum     = float(self.prix.min())
-        maximum     = float(self.prix.max())
+        maximum     = float(self.prix.max()) 
         nb_negatifs = int((self.prix < 0).sum())
         self.lbl_info.setText(f"Min : {minimum:.2f} €/MWh   |   Max : {maximum:.2f} €/MWh   |   Heures négatives : {nb_negatifs}")
+
 
     def _verifier_seuil(self):
         if self.prix is None:
