@@ -43,8 +43,8 @@ def envoyer_email(to_email, subject, body):
 
     try:
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.ehlo()
-            server.starttls()                          # Chiffrement TLS
+            server.ehlo() # C'est une étape obligatoire du protocole SMTP avant de pouvoir faire quoi que ce soit.
+            server.starttls() # ptotection TLS : la connexion est chiffrée
             server.login(config.EMAIL_SENDER, config.EMAIL_PASSWORD)
             server.send_message(msg)
         return True

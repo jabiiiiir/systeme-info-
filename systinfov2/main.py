@@ -1,5 +1,6 @@
 import sys
-
+# sys.argv : transmet les arguments de la ligne de commande à l'application
+# sys.exit() : ferme proprement l'application quand l'utilisateur ferme la fenêtre
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QTabWidget,
     QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, QLineEdit
@@ -14,8 +15,8 @@ from tab_commandes     import OrdersTab
 class MainWindow(QMainWindow):
 
     def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Voodoo Production Manager")
+        super().__init__() # sans ça la fenêtre ne fonctionnerait pas correctement car elle ne serait pas correctement initialisée par PyQt6
+        self.setWindowTitle("Boulangerie Jaber-Hajji")
         self.resize(1100, 700)
 
         db.creer_tables()
@@ -35,11 +36,11 @@ class MainWindow(QMainWindow):
         tabs = QTabWidget()
         self.prices_tab = PricesTab(get_manager_info=self._infos_responsable)
         self.config_tab = ConfigTab()
-        self.orders_tab = OrdersTab(self.prices_tab, get_manager_info=self._infos_responsable)
-        tabs.addTab(self.config_tab,  "Configuration")
+        self.orders_tab = OrdersTab(self.prices_tab, get_manager_info=self._infos_responsable) #accès direct aux champs nom/email de la barre d'identification
+        tabs.addTab(self.config_tab,  "Configuration") #On ajoute les onglets dans l'ordre d'affichage
         tabs.addTab(self.prices_tab,  "Prix Électricité")
         tabs.addTab(self.orders_tab,  "Commandes")
-        tabs.currentChanged.connect(self._changement_onglet)
+        tabs.currentChanged.connect(self._changement_onglet) #PyQt6 émet un signal avec le numéro du nouvel onglet
 
         central = QWidget()
         layout  = QVBoxLayout(central)
