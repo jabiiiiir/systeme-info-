@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, QLineEdit
 )
 
-import database as db
+import database
 from tab_prix          import PricesTab
 from tab_configuration import ConfigTab
 from tab_commandes     import OrdersTab
@@ -19,53 +19,53 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Boulangerie Jaber-Hajji")
         self.resize(1100, 700)
 
-        db.creer_tables()
+        database.creer_tables()
         self._charger_demo()
 
         # Barre d'identification
-        id_box = QGroupBox("Identification")
-        id_form = QHBoxLayout(id_box)
-        id_form.addWidget(QLabel("Nom / Entreprise :"))
-        self.inp_manager_name = QLineEdit()
-        id_form.addWidget(self.inp_manager_name)
-        id_form.addWidget(QLabel("Email :"))
-        self.inp_manager_email = QLineEdit()
-        id_form.addWidget(self.inp_manager_email)
+        boite_id = QGroupBox("Identification")
+        formulaire_id = QHBoxLayout(boite_id)
+        formulaire_id.addWidget(QLabel("Nom / Entreprise :"))
+        self.champ_nom = QLineEdit()
+        formulaire_id.addWidget(self.champ_nom)
+        formulaire_id.addWidget(QLabel("Email :"))
+        self.champ_email = QLineEdit()
+        formulaire_id.addWidget(self.champ_email)
 
         # Onglets
-        tabs = QTabWidget()
-        self.prices_tab = PricesTab(get_manager_info=self._infos_responsable)
-        self.config_tab = ConfigTab()
-        self.orders_tab = OrdersTab(self.prices_tab, get_manager_info=self._infos_responsable) #accès direct aux champs nom/email de la barre d'identification
-        tabs.addTab(self.config_tab,  "Configuration") #On ajoute les onglets dans l'ordre d'affichage
-        tabs.addTab(self.prices_tab,  "Prix Électricité")
-        tabs.addTab(self.orders_tab,  "Commandes")
-        tabs.currentChanged.connect(self._changement_onglet) #PyQt6 émet un signal avec le numéro du nouvel onglet
+        onglets = QTabWidget()
+        self.onglet_prix          = PricesTab(get_manager_info=self._infos_responsable)
+        self.onglet_configuration = ConfigTab()
+        self.onglet_commandes     = OrdersTab(self.onglet_prix, get_manager_info=self._infos_responsable) #accès direct aux champs nom/email de la barre d'identification
+        onglets.addTab(self.onglet_configuration, "Configuration") #On ajoute les onglets dans l'ordre d'affichage
+        onglets.addTab(self.onglet_prix,          "Prix Électricité")
+        onglets.addTab(self.onglet_commandes,     "Commandes")
+        onglets.currentChanged.connect(self._changement_onglet) #PyQt6 émet un signal avec le numéro du nouvel onglet
 
-        central = QWidget()
-        layout  = QVBoxLayout(central)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(4)
-        layout.addWidget(id_box)
-        layout.addWidget(tabs)
-        self.setCentralWidget(central)
-        self._tabs = tabs
+        widget_central = QWidget()
+        disposition    = QVBoxLayout(widget_central)
+        disposition.setContentsMargins(6, 6, 6, 6)
+        disposition.setSpacing(4)
+        disposition.addWidget(boite_id)
+        disposition.addWidget(onglets)
+        self.setCentralWidget(widget_central)
+        self._onglets = onglets
 
         self._appliquer_style()
 
     def _infos_responsable(self):
         return (
-            self.inp_manager_name.text().strip(),
-            self.inp_manager_email.text().strip(),
+            self.champ_nom.text().strip(),
+            self.champ_email.text().strip(),
         )
 
-    def _changement_onglet(self, index):
-        if index == 2:
-            self.orders_tab.actualiser_combo_produits()
-            self.orders_tab._actualiser_commandes()
+    def _changement_onglet(self, indice):
+        if indice == 2:
+            self.onglet_commandes.actualiser_combo_produits()
+            self.onglet_commandes._actualiser_commandes()
 
     def _charger_demo(self):
-        if db.lister_machines():
+        if database.lister_machines():
             return
         machines = [
             ("Pétrin industriel",       3000,  "Ahmed Benali",  "ahmed.benali@voodoo.be",  5.0),
@@ -73,20 +73,20 @@ class MainWindow(QMainWindow):
             ("Chambre de fermentation", 500,   "Ahmed Benali",  "ahmed.benali@voodoo.be",  2.0),
             ("Trancheuse-emballeuse",   800,   "Marc Lecomte",  "marc.lecomte@voodoo.be",  3.0),
         ]
-        ids = {}
-        for name, power, oper, email, fixed in machines:
-            ids[name] = db.ajouter_machine(name, power, oper, email, fixed )
+        identifiants = {}
+        for nom, puissance, operateur, email, fixe in machines:
+            identifiants[nom] = database.ajouter_machine(nom, puissance, operateur, email, fixe)
 
-        products_tasks = {
-            "Pain blanc":       [(ids["Pétrin industriel"], 20), (ids["Chambre de fermentation"], 60), (ids["Four tunnel"], 30), (ids["Trancheuse-emballeuse"], 10)],
-            "Baguette":         [(ids["Pétrin industriel"], 15), (ids["Chambre de fermentation"], 45), (ids["Four tunnel"], 25)],
-            "Croissants":       [(ids["Pétrin industriel"], 30), (ids["Chambre de fermentation"], 90), (ids["Four tunnel"], 20), (ids["Trancheuse-emballeuse"], 5)],
-            "Pain de campagne": [(ids["Pétrin industriel"], 25), (ids["Chambre de fermentation"], 75), (ids["Four tunnel"], 40)],
+        taches_produits = {
+            "Pain blanc":       [(identifiants["Pétrin industriel"], 20), (identifiants["Chambre de fermentation"], 60), (identifiants["Four tunnel"], 30), (identifiants["Trancheuse-emballeuse"], 10)],
+            "Baguette":         [(identifiants["Pétrin industriel"], 15), (identifiants["Chambre de fermentation"], 45), (identifiants["Four tunnel"], 25)],
+            "Croissants":       [(identifiants["Pétrin industriel"], 30), (identifiants["Chambre de fermentation"], 90), (identifiants["Four tunnel"], 20), (identifiants["Trancheuse-emballeuse"], 5)],
+            "Pain de campagne": [(identifiants["Pétrin industriel"], 25), (identifiants["Chambre de fermentation"], 75), (identifiants["Four tunnel"], 40)],
         }
-        for prod_name, steps in products_tasks.items():
-            p_id = db.ajouter_produit(prod_name)
-            for order, (machine_id, duration) in enumerate(steps, start=1):
-                db.ajouter_etape(p_id, machine_id, duration, order)
+        for nom_produit, etapes in taches_produits.items():
+            id_produit = database.ajouter_produit(nom_produit)
+            for ordre, (id_machine, duree) in enumerate(etapes, start=1):
+                database.ajouter_etape(id_produit, id_machine, duree, ordre)
 
     def _appliquer_style(self):
         self.setStyleSheet("""
@@ -111,9 +111,9 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
+    application = QApplication(sys.argv)
+    fenetre = MainWindow()
+    fenetre.show()
+    sys.exit(application.exec())
 #push
 #test

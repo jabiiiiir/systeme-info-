@@ -10,7 +10,7 @@ matplotlib.use("QtAgg")
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-import database as db
+import database
 import api_entsoe
 import email_sender
 
@@ -28,8 +28,8 @@ class PriceWorker(QThread):
     def run(self):
         try:
             self.finished.emit(api_entsoe.recuperer_prix_journaliers(self.date))
-        except Exception as e:
-            self.error.emit(str(e))
+        except Exception as erreur:
+            self.error.emit(str(erreur))
 
 # C'est une classe très importante à comprendre. Voici pourquoi elle existe :
 # Quand on appelle l'API ENTSO-E, ça peut prendre plusieurs secondes. Si on faisait ça directement dans le code principal, toute la fenêtre se figerait pendant ce temps — l'utilisateur ne pourrait plus rien faire.
@@ -38,59 +38,59 @@ class PriceWorker(QThread):
 class SimpleEmailWorker(QThread):
     finished = pyqtSignal(bool, str)
 
-    def __init__(self, to_email, subject, body):
+    def __init__(self, email_destinataire, sujet, corps):
         super().__init__()
-        self.to_email = to_email
-        self.subject  = subject
-        self.body     = body
+        self.email_destinataire = email_destinataire
+        self.sujet              = sujet
+        self.corps              = corps
 
     def run(self):
         try:
-            ok = email_sender.envoyer_email(self.to_email, self.subject, self.body)
+            ok = email_sender.envoyer_email(self.email_destinataire, self.sujet, self.corps)
             self.finished.emit(ok, "" if ok else "Échec inconnu")
-        except Exception as e:
-            self.finished.emit(False, str(e))
+        except Exception as erreur:
+            self.finished.emit(False, str(erreur))
 
 
 class PricesTab(QWidget):
 
     def __init__(self, get_manager_info=None):
         super().__init__()
-        self.prices = None
+        self.prix              = None
         self._get_manager_info = get_manager_info
         uic.loadUi(os.path.join(_UI_DIR, "prices_tab.ui"), self)
         self.date_edit.setDate(QDate.currentDate())
-        self.figure = Figure(figsize=(8, 4))
-        self.canvas = FigureCanvas(self.figure)
-        self.canvas_container.layout().addWidget(self.canvas)
+        self.graphique = Figure(figsize=(8, 4))
+        self.canevas   = FigureCanvas(self.graphique)
+        self.canvas_container.layout().addWidget(self.canevas)
         self.btn_load.clicked.connect(self.charger_prix)
         self.btn_check_threshold.clicked.connect(self._verifier_seuil)
         QTimer.singleShot(100, self._chargement_auto_prix)
 
     def _chargement_auto_prix(self):
-        date_str = self.date_edit.date().toString("yyyy-MM-dd")
-        cached = db.charger_prix_electricite(date_str)
-        if cached is not None:
-            self.prices = cached
+        chaine_date = self.date_edit.date().toString("yyyy-MM-dd")
+        en_cache    = database.charger_prix_electricite(chaine_date)
+        if en_cache is not None:
+            self.prix = en_cache
             self.lbl_info.setText("Prix chargés depuis le cache local.")
             self._dessiner_graphique()
         else:
             self.charger_prix()
 
     def charger_prix(self):
-        qdate  = self.date_edit.date()
-        target = datetime(qdate.year(), qdate.month(), qdate.day())
+        date_qt    = self.date_edit.date()
+        date_cible = datetime(date_qt.year(), date_qt.month(), date_qt.day())
         self.btn_load.setEnabled(False)
         self.lbl_info.setText("Chargement en cours…")
-        self._worker = PriceWorker(target)
+        self._worker = PriceWorker(date_cible)
         self._worker.finished.connect(self._prix_charges)
         self._worker.error.connect(self._erreur_chargement)
         self._worker.start()
 
-    def _prix_charges(self, prices):
-        self.prices = prices
-        date_str = self.date_edit.date().toString("yyyy-MM-dd")
-        db.sauvegarder_prix_electricite(date_str, prices)
+    def _prix_charges(self, prix):
+        self.prix   = prix
+        chaine_date = self.date_edit.date().toString("yyyy-MM-dd")
+        database.sauvegarder_prix_electricite(chaine_date, prix)
         self.btn_load.setEnabled(True)
         self._dessiner_graphique()
         self._verifier_seuil()
@@ -101,50 +101,50 @@ class PricesTab(QWidget):
         QMessageBox.critical(self, "Erreur API", f"Impossible de récupérer les prix :\n{message}")
 
     def _dessiner_graphique(self):
-        self.figure.clear()
-        ax = self.figure.add_subplot(111)
-        times  = self.prices.index.to_pydatetime()
-        values = self.prices.values
-        colors = ["#e74c3c" if v < 0 else "#2ecc71" for v in values]
-        ax.bar(range(len(values)), values, color=colors, width=0.8)
+        self.graphique.clear()
+        ax       = self.graphique.add_subplot(111)
+        instants = self.prix.index.to_pydatetime()
+        valeurs  = self.prix.values
+        couleurs = ["#e74c3c" if v < 0 else "#2ecc71" for v in valeurs]
+        ax.bar(range(len(valeurs)), valeurs, color=couleurs, width=0.8)
         ax.axhline(0, color="black", linewidth=0.8, linestyle="--")
-        step = max(1, len(times) // 12)
-        ax.set_xticks(range(0, len(times), step))
-        ax.set_xticklabels([t.strftime("%H:%M") for t in times[::step]], rotation=45, ha="right", fontsize=8)
+        pas = max(1, len(instants) // 12)
+        ax.set_xticks(range(0, len(instants), pas))
+        ax.set_xticklabels([t.strftime("%H:%M") for t in instants[::pas]], rotation=45, ha="right", fontsize=8)
         ax.set_ylabel("EUR / MWh")
         ax.set_title(f"Prix day-ahead — {self.date_edit.date().toString('dd/MM/yyyy')}")
         ax.grid(axis="y", linestyle=":", alpha=0.5)
-        self.figure.tight_layout()
-        self.canvas.draw()
-        mn = float(self.prices.min())
-        mx = float(self.prices.max())
-        neg_count = int((self.prices < 0).sum())
-        self.lbl_info.setText(f"Min : {mn:.2f} €/MWh   |   Max : {mx:.2f} €/MWh   |   Heures négatives : {neg_count}")
+        self.graphique.tight_layout()
+        self.canevas.draw()
+        minimum     = float(self.prix.min())
+        maximum     = float(self.prix.max())
+        nb_negatifs = int((self.prix < 0).sum())
+        self.lbl_info.setText(f"Min : {minimum:.2f} €/MWh   |   Max : {maximum:.2f} €/MWh   |   Heures négatives : {nb_negatifs}")
 
     def _verifier_seuil(self):
-        if self.prices is None:
+        if self.prix is None:
             QMessageBox.information(self, "Prix non chargés", "Chargez d'abord les prix avant de vérifier le seuil.")
             return
-        threshold = self.spn_threshold.value()
-        below = self.prices[self.prices < threshold]
-        if below.empty:
-            QMessageBox.information(self, "Aucune alerte", f"Aucun prix ne descend sous le seuil de {threshold:.2f} €/MWh pour cette journée.")
+        seuil      = self.spn_threshold.value()
+        en_dessous = self.prix[self.prix < seuil]
+        if en_dessous.empty:
+            QMessageBox.information(self, "Aucune alerte", f"Aucun prix ne descend sous le seuil de {seuil:.2f} €/MWh pour cette journée.")
         else:
-            lines = "\n".join(f"  {t.strftime('%H:%M')} : {v:.2f} €/MWh" for t, v in zip(below.index.to_pydatetime(), below.values))
-            QMessageBox.warning(self, f"Alerte seuil — {threshold:.2f} €/MWh", f"Les prix descendent sous {threshold:.2f} €/MWh aux heures suivantes :\n\n{lines}")
+            lignes = "\n".join(f"  {t.strftime('%H:%M')} : {v:.2f} €/MWh" for t, v in zip(en_dessous.index.to_pydatetime(), en_dessous.values))
+            QMessageBox.warning(self, f"Alerte seuil — {seuil:.2f} €/MWh", f"Les prix descendent sous {seuil:.2f} €/MWh aux heures suivantes :\n\n{lignes}")
             if self._get_manager_info:
-                manager_name, manager_email = self._get_manager_info()
-                if manager_email:
-                    date_str = self.date_edit.date().toString("dd/MM/yyyy")
-                    subject  = f"[Alerte prix] Seuil {threshold:.2f} €/MWh franchi — {date_str}"
-                    body = (
-                        f"Bonjour {manager_name},\n\n"
-                        f"Une alerte de prix a été déclenchée pour le {date_str}.\n"
-                        f"Le prix descend sous {threshold:.2f} €/MWh aux heures suivantes :\n\n"
-                        f"{lines}\n\nVoodoo Production Manager"
+                nom_responsable, email_responsable = self._get_manager_info()
+                if email_responsable:
+                    chaine_date = self.date_edit.date().toString("dd/MM/yyyy")
+                    sujet = f"[Alerte prix] Seuil {seuil:.2f} €/MWh franchi — {chaine_date}"
+                    corps = (
+                        f"Bonjour {nom_responsable},\n\n"
+                        f"Une alerte de prix a été déclenchée pour le {chaine_date}.\n"
+                        f"Le prix descend sous {seuil:.2f} €/MWh aux heures suivantes :\n\n"
+                        f"{lignes}\n\nVoodoo Production Manager"
                     )
-                    self._alert_worker = SimpleEmailWorker(manager_email, subject, body)
-                    self._alert_worker.start()
+                    self._worker_alerte = SimpleEmailWorker(email_responsable, sujet, corps)
+                    self._worker_alerte.start()
 
     def prix_actuels(self):
-        return self.prices
+        return self.prix

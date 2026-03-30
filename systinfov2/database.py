@@ -17,18 +17,18 @@ DB_PATH = "voodoo.db"
 
 def _connexion():
     """Ouvre une connexion SQLite et active les clés étrangères."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    connexion = sqlite3.connect(DB_PATH)
+    connexion.execute("PRAGMA foreign_keys = ON")
+    return connexion
 
 
 def creer_tables():
     """Crée toutes les tables si elles n'existent pas encore."""
-    conn = _connexion()
-    c = conn.cursor()
+    connexion = _connexion()
+    curseur   = connexion.cursor()
 
     # Table des machines
-    c.execute("""
+    curseur.execute("""
         CREATE TABLE IF NOT EXISTS machines (
             id             INTEGER PRIMARY KEY AUTOINCREMENT,
             name           TEXT    NOT NULL UNIQUE,
@@ -40,7 +40,7 @@ def creer_tables():
     """)
 
     # Table des produits
-    c.execute("""
+    curseur.execute("""
         CREATE TABLE IF NOT EXISTS products (
             id   INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT    NOT NULL UNIQUE
@@ -49,7 +49,7 @@ def creer_tables():
 
     # Table des étapes (une étape = une machine + une durée dans un produit)
     # step_order définit l'ordre d'exécution des étapes au sein d'un produit
-    c.execute("""
+    curseur.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
             product_id   INTEGER NOT NULL,
@@ -62,7 +62,7 @@ def creer_tables():
     """)
 
     # Table des commandes journalières
-    c.execute("""
+    curseur.execute("""
         CREATE TABLE IF NOT EXISTS orders (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
             product_id   INTEGER NOT NULL,
@@ -73,7 +73,7 @@ def creer_tables():
     """)
 
     # Table des prix d'électricité (cache ENTSO-E)
-    c.execute("""
+    curseur.execute("""
         CREATE TABLE IF NOT EXISTS electricity_prices (
             id            INTEGER PRIMARY KEY AUTOINCREMENT,
             date          TEXT    NOT NULL,
@@ -83,8 +83,8 @@ def creer_tables():
         )
     """)
 
-    conn.commit()
-    conn.close()
+    connexion.commit()
+    connexion.close()
 # commit() valide et écrit toutes les modifications dans le fichier. Sans cette ligne,
 #  toutes les tables créées seraient perdues à la fermeture
 # close() ferme proprement la connexion et libère les ressources système
@@ -95,57 +95,57 @@ def creer_tables():
 
 def ajouter_machine(name, power_w, operator_name, operator_email, fixed_cost):
     """Insère une nouvelle machine. Retourne l'id généré."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute(
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute(
         "INSERT INTO machines (name, power_w, operator_name, operator_email, fixed_cost) "
         "VALUES (?, ?, ?, ?, ?)",
         (name, power_w, operator_name, operator_email, fixed_cost)
     )
-    conn.commit()
-    new_id = c.lastrowid
-    conn.close()
-    return new_id
+    connexion.commit()
+    nouvel_id = curseur.lastrowid
+    connexion.close()
+    return nouvel_id
 
 
 def lister_machines():
     """Retourne toutes les machines : (id, name, power_w, operator_name, operator_email, fixed_cost)."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute(
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute(
         "SELECT id, name, power_w, operator_name, operator_email, fixed_cost "
         "FROM machines ORDER BY name"
     )
-    rows = c.fetchall()
-    conn.close()
-    return rows
+    lignes = curseur.fetchall()
+    connexion.close()
+    return lignes
 
 
 def trouver_machine(machine_id):
     """Retourne une machine par son id, ou None si inexistante."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute(
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute(
         "SELECT id, name, power_w, operator_name, operator_email, fixed_cost "
         "FROM machines WHERE id=?",
         (machine_id,)
     )
-    row = c.fetchone()
-    conn.close()
-    return row
+    ligne = curseur.fetchone()
+    connexion.close()
+    return ligne
 
 
 def modifier_machine(machine_id, name, power_w, operator_name, operator_email, fixed_cost):
     """Met à jour les informations d'une machine existante."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute(
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute(
         "UPDATE machines SET name=?, power_w=?, operator_name=?, operator_email=?, fixed_cost=? "
         "WHERE id=?",
         (name, power_w, operator_name, operator_email, fixed_cost, machine_id)
     )
-    conn.commit()
-    conn.close()
+    connexion.commit()
+    connexion.close()
 
 # WHERE id=? : très important — sans cette condition, toutes les machines seraient modifiées. Ici on cible uniquement la machine dont l'id correspond
 # Remarque : il n'y a pas de return ici car on n'a pas besoin de récupérer quoi que ce soit après une modification
@@ -155,11 +155,11 @@ def modifier_machine(machine_id, name, power_w, operator_name, operator_email, f
 
 def supprimer_machine(machine_id):
     """Supprime une machine. Les étapes qui l'utilisent passent à machine_id=NULL."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute("DELETE FROM machines WHERE id=?", (machine_id,))
-    conn.commit()
-    conn.close()
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute("DELETE FROM machines WHERE id=?", (machine_id,))
+    connexion.commit()
+    connexion.close()
 
 
 # ==============================================================================
@@ -168,42 +168,42 @@ def supprimer_machine(machine_id):
 
 def ajouter_produit(name):
     """Insère un nouveau produit. Retourne l'id généré."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute("INSERT INTO products (name) VALUES (?)", (name,))
-    conn.commit()
-    new_id = c.lastrowid
-    conn.close()
-    return new_id
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute("INSERT INTO products (name) VALUES (?)", (name,))
+    connexion.commit()
+    nouvel_id = curseur.lastrowid
+    connexion.close()
+    return nouvel_id
 
 
 def modifier_produit(product_id, name):
     """Renomme un produit existant."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute("UPDATE products SET name=? WHERE id=?", (name, product_id))
-    conn.commit()
-    conn.close()
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute("UPDATE products SET name=? WHERE id=?", (name, product_id))
+    connexion.commit()
+    connexion.close()
 
 
 def lister_produits():
     """Retourne tous les produits : (id, name)."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute("SELECT id, name FROM products ORDER BY name")
-    rows = c.fetchall()
-    conn.close()
-    return rows
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute("SELECT id, name FROM products ORDER BY name")
+    lignes = curseur.fetchall()
+    connexion.close()
+    return lignes
 
 
 def supprimer_produit(product_id):
     """Supprime un produit et toutes ses étapes (CASCADE)."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute("DELETE FROM tasks   WHERE product_id=?", (product_id,))
-    c.execute("DELETE FROM products WHERE id=?",        (product_id,))
-    conn.commit()
-    conn.close()
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute("DELETE FROM tasks   WHERE product_id=?", (product_id,))
+    curseur.execute("DELETE FROM products WHERE id=?",        (product_id,))
+    connexion.commit()
+    connexion.close()
 
 
 # ==============================================================================
@@ -212,14 +212,14 @@ def supprimer_produit(product_id):
 
 def ajouter_etape(product_id, machine_id, duration_min, step_order):
     """Insère une étape dans un produit."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute(
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute(
         "INSERT INTO tasks (product_id, machine_id, duration_min, step_order) VALUES (?,?,?,?)",
         (product_id, machine_id, duration_min, step_order)
     )
-    conn.commit()
-    conn.close()
+    connexion.commit()
+    connexion.close()
 
 
 def lister_etapes_produit(product_id):
@@ -228,9 +228,9 @@ def lister_etapes_produit(product_id):
     Chaque ligne : (id, step_order, machine_name, duration_min, machine_id,
                     power_w, operator_name, operator_email, fixed_cost)
     """
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute("""
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute("""
         SELECT t.id,
                t.step_order,
                m.name,
@@ -245,28 +245,28 @@ def lister_etapes_produit(product_id):
         WHERE t.product_id = ?
         ORDER BY t.step_order
     """, (product_id,))
-    rows = c.fetchall()
-    conn.close()
-    return rows
+    lignes = curseur.fetchall()
+    connexion.close()
+    return lignes
 
 
 def prochain_ordre_etape(product_id):
     """Retourne le prochain numéro d'ordre disponible pour un produit."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute("SELECT COALESCE(MAX(step_order), 0) + 1 FROM tasks WHERE product_id=?", (product_id,))
-    result = c.fetchone()[0]
-    conn.close()
-    return result
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute("SELECT COALESCE(MAX(step_order), 0) + 1 FROM tasks WHERE product_id=?", (product_id,))
+    resultat = curseur.fetchone()[0]
+    connexion.close()
+    return resultat
 
 
 def supprimer_etape(task_id):
     """Supprime une étape par son id."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute("DELETE FROM tasks WHERE id=?", (task_id,))
-    conn.commit()
-    conn.close()
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute("DELETE FROM tasks WHERE id=?", (task_id,))
+    connexion.commit()
+    connexion.close()
 
 
 # ==============================================================================
@@ -275,16 +275,16 @@ def supprimer_etape(task_id):
 
 def ajouter_commande(product_id, start_time, order_date):
     """Insère une commande. Retourne l'id généré."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute(
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute(
         "INSERT INTO orders (product_id, start_time, order_date) VALUES (?,?,?)",
         (product_id, start_time, order_date)
     )
-    conn.commit()
-    new_id = c.lastrowid
-    conn.close()
-    return new_id
+    connexion.commit()
+    nouvel_id = curseur.lastrowid
+    connexion.close()
+    return nouvel_id
 
 
 def lister_commandes_du_jour(order_date):
@@ -292,49 +292,49 @@ def lister_commandes_du_jour(order_date):
     Retourne les commandes d'une date donnée (format 'YYYY-MM-DD'), triées par heure.
     Chaque ligne : (id, product_name, start_time, product_id)
     """
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute("""
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute("""
         SELECT o.id, p.name, o.start_time, o.product_id
         FROM orders o
         JOIN products p ON o.product_id = p.id
         WHERE o.order_date = ?
         ORDER BY o.start_time
     """, (order_date,))
-    rows = c.fetchall()
-    conn.close()
-    return rows
+    lignes = curseur.fetchall()
+    connexion.close()
+    return lignes
 
 
 def supprimer_commande(order_id):
     """Supprime une commande par son id."""
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute("DELETE FROM orders WHERE id=?", (order_id,))
-    conn.commit()
-    conn.close()
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute("DELETE FROM orders WHERE id=?", (order_id,))
+    connexion.commit()
+    connexion.close()
 
 
 # ==============================================================================
 # ELECTRICITY_PRICES (cache des prix ENTSO-E)
 # ==============================================================================
 
-def sauvegarder_prix_electricite(date_str, prices_series):
+def sauvegarder_prix_electricite(date_str, serie_prix):
     """
     Stocke ou met à jour les prix d'électricité pour une date donnée.
-    prices_series : pandas.Series indexé par Timestamp (Europe/Brussels).
-    date_str      : 'YYYY-MM-DD'
+    serie_prix : pandas.Series indexé par Timestamp (Europe/Brussels).
+    date_str   : 'YYYY-MM-DD'
     """
-    conn = _connexion()
-    c = conn.cursor()
-    for ts, price in prices_series.items():
-        c.execute(
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    for horodatage, prix in serie_prix.items():
+        curseur.execute(
             "INSERT OR REPLACE INTO electricity_prices (date, hour_ts, price_eur_mwh) "
             "VALUES (?, ?, ?)",
-            (date_str, ts.isoformat(), float(price))
+            (date_str, horodatage.isoformat(), float(prix))
         )
-    conn.commit()
-    conn.close()
+    connexion.commit()
+    connexion.close()
 
 
 def charger_prix_electricite(date_str):
@@ -343,17 +343,17 @@ def charger_prix_electricite(date_str):
     ou None si aucune donnée n'existe pour cette date.
     date_str : 'YYYY-MM-DD'
     """
-    import pandas as pd
-    conn = _connexion()
-    c = conn.cursor()
-    c.execute(
+    import pandas
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute(
         "SELECT hour_ts, price_eur_mwh FROM electricity_prices WHERE date=? ORDER BY hour_ts",
         (date_str,)
     )
-    rows = c.fetchall()
-    conn.close()
-    if not rows:
+    lignes = curseur.fetchall()
+    connexion.close()
+    if not lignes:
         return None
-    index  = pd.to_datetime([r[0] for r in rows], utc=True)
-    values = [r[1] for r in rows]
-    return pd.Series(values, index=index)
+    index_temporel = pandas.to_datetime([ligne[0] for ligne in lignes], utc=True)
+    valeurs        = [ligne[1] for ligne in lignes]
+    return pandas.Series(valeurs, index=index_temporel)

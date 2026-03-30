@@ -5,15 +5,15 @@
 # Documentation : https://github.com/EnergieID/entsoe-py
 # ==============================================================================
 
-import pandas as pd
+import pandas
 #: une librairie pour manipuler des tableaux de données. Ici on l'utilise pour stocker les prix sous forme de série temporelle (une valeur par heure).
 from datetime import datetime
 
 try:
     from entsoe import EntsoePandasClient
-    ENTSOE_AVAILABLE = True
+    ENTSOE_DISPONIBLE = True
 except ImportError:
-    ENTSOE_AVAILABLE = False
+    ENTSOE_DISPONIBLE = False
 #Cela permet à l'application de démarrer quand même et d'afficher un message d'erreur clair plus tard.
 
 import config
@@ -31,44 +31,44 @@ def recuperer_prix_journaliers(date=None):
 
     Lève une exception si l'API est indisponible ou le token invalide.
     """
-    if not ENTSOE_AVAILABLE:
+    if not ENTSOE_DISPONIBLE:
         raise ImportError(
             "La librairie entsoe-py n'est pas installée.\n"
             "Exécutez : pip install entsoe-py"
         )
 
-    client = EntsoePandasClient(api_key=config.ENTSOE_TOKEN)
+    service = EntsoePandasClient(api_key=config.ENTSOE_TOKEN)
 
     if date is None:
         date = datetime.now()
 
     # Début et fin de la journée en heure locale belge
-    start = pd.Timestamp(date.strftime("%Y%m%d"), tz="Europe/Brussels")
-    end   = start + pd.Timedelta(days=1)
+    debut = pandas.Timestamp(date.strftime("%Y%m%d"), tz="Europe/Brussels")
+    fin   = debut + pandas.Timedelta(days=1)
 
-    prices = client.query_day_ahead_prices(config.COUNTRY_CODE, start=start, end=end)
-    return prices
+    prix = service.query_day_ahead_prices(config.COUNTRY_CODE, start=debut, end=fin)
+    return prix
 
 
-def obtenir_prix_a_instant(prices, dt):
+def obtenir_prix_a_instant(prix, dt):
     """
     Retourne le prix de l'électricité (EUR/MWh) à un instant donné.
 
     Paramètres :
-        prices : pandas.Series retourné par recuperer_prix_journaliers()
-        dt     : datetime (naïf ou avec fuseau horaire)
+        prix : pandas.Series retourné par recuperer_prix_journaliers()
+        dt   : datetime (naïf ou avec fuseau horaire)
 
     Retourne 0.0 si les prix sont indisponibles.
     """
-    if prices is None or prices.empty:
+    if prix is None or prix.empty:
         return 0.0
 
     try:
         # Convertit dt en Timestamp localisé Europe/Brussels
-        ts = pd.Timestamp(dt).tz_localize("Europe/Brussels")
+        horodatage = pandas.Timestamp(dt).tz_localize("Europe/Brussels")
     except TypeError:
         # dt est déjà timezone-aware
-        ts = pd.Timestamp(dt).tz_convert("Europe/Brussels")
+        horodatage = pandas.Timestamp(dt).tz_convert("Europe/Brussels")
     except Exception:
         return 0.0
 #On convertit dt en timestamp avec le bon fuseau horaire. Deux cas sont gérés :
@@ -77,21 +77,21 @@ def obtenir_prix_a_instant(prices, dt):
 # Si dt en a déjà un, tz_localize lèverait une TypeError — dans ce cas on utilise tz_convert pour le convertir en heure belge
 # Si n'importe quoi d'autre plante, on retourne 0.0 par sécurité
 
-    # Cherche le dernier intervalle de prix dont le début est <= ts
-    valid = prices[prices.index <= ts]
-    if valid.empty:
-        return float(prices.iloc[0])   # premier prix disponible
-    return float(valid.iloc[-1])
+    # Cherche le dernier intervalle de prix dont le début est <= horodatage
+    valides = prix[prix.index <= horodatage]
+    if valides.empty:
+        return float(prix.iloc[0])   # premier prix disponible
+    return float(valides.iloc[-1])
 
-# prices[prices.index <= ts] filtre la série pour ne garder que les prix dont l'heure est avant ou égale à ts
+# prix[prix.index <= horodatage] filtre la série pour ne garder que les prix dont l'heure est avant ou égale à horodatage
 # .iloc[-1] prend le dernier élément de cette liste filtrée — c'est donc le prix de la tranche horaire en cours
-# Si aucun prix n'est encore passé (la série filtrée est vide), on retourne le tout premier prix disponible avec prices.iloc[0]
+# Si aucun prix n'est encore passé (la série filtrée est vide), on retourne le tout premier prix disponible avec prix.iloc[0]
 
-def obtenir_prix_negatifs(prices):
+def obtenir_prix_negatifs(prix):
     """
     Retourne un pandas.Series contenant uniquement les prix négatifs.
     Retourne une Series vide si aucun prix négatif.
     """
-    if prices is None or prices.empty:
-        return pd.Series(dtype=float)
-    return prices[prices < 0]
+    if prix is None or prix.empty:
+        return pandas.Series(dtype=float)
+    return prix[prix < 0]

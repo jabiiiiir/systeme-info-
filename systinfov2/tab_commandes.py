@@ -1,4 +1,4 @@
-import os
+import os # Pour construire les chemins vers les fichiers UI
 import importlib
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -7,68 +7,68 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import QWidget, QTableWidgetItem, QMessageBox, QHeaderView
 from PyQt6.QtCore import Qt, QDate, QThread, pyqtSignal
 
-import database as db
+import database
 import api_entsoe
 import email_sender
 
-_TZ_CET = ZoneInfo("Europe/Brussels")
-_UI_DIR  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui")
+_FUSEAU_HORAIRE = ZoneInfo("Europe/Brussels")
+_UI_DIR         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui")
 
 
 class EmailWorker(QThread):
     finished = pyqtSignal(int, list)
 
-    def __init__(self, schedules, order_date):
+    def __init__(self, plannings, date_commande):
         super().__init__()
-        self.schedules  = schedules
-        self.order_date = order_date
+        self.plannings      = plannings
+        self.date_commande  = date_commande
 
     def run(self):
-        sent, errors = 0, []
-        for (op_name, op_email), lines in self.schedules.items():
-            if not op_email:
+        envoyes, erreurs = 0, []
+        for (nom_operateur, email_operateur), lignes in self.plannings.items():
+            if not email_operateur:
                 continue
-            subject = f"Planning de production du {self.order_date}"
-            body    = email_sender.construire_planning_operateur(op_name, lines)
+            sujet = f"Planning de production du {self.date_commande}"
+            corps = email_sender.construire_planning_operateur(nom_operateur, lignes)
             try:
-                if email_sender.envoyer_email(op_email, subject, body):
-                    sent += 1
+                if email_sender.envoyer_email(email_operateur, sujet, corps):
+                    envoyes += 1
                 else:
-                    errors.append(f"{op_name} <{op_email}> : échec inconnu")
-            except Exception as e:
-                errors.append(f"{op_name} <{op_email}> : {e}")
-        self.finished.emit(sent, errors)
+                    erreurs.append(f"{nom_operateur} <{email_operateur}> : échec inconnu")
+            except Exception as erreur:
+                erreurs.append(f"{nom_operateur} <{email_operateur}> : {erreur}")
+        self.finished.emit(envoyes, erreurs)
 
 
 class SimpleEmailWorker(QThread):
     finished = pyqtSignal(bool, str)
 
-    def __init__(self, to_email, subject, body):
+    def __init__(self, email_destinataire, sujet, corps):
         super().__init__()
-        self.to_email = to_email
-        self.subject  = subject
-        self.body     = body
+        self.email_destinataire = email_destinataire
+        self.sujet              = sujet
+        self.corps              = corps
 
     def run(self):
         try:
-            ok = email_sender.envoyer_email(self.to_email, self.subject, self.body)
+            ok = email_sender.envoyer_email(self.email_destinataire, self.sujet, self.corps)
             self.finished.emit(ok, "" if ok else "Échec inconnu")
-        except Exception as e:
-            self.finished.emit(False, str(e))
+        except Exception as erreur:
+            self.finished.emit(False, str(erreur))
 
 
 class OrdersTab(QWidget):
 
     def __init__(self, prices_tab, get_manager_info=None):
         super().__init__()
-        self._prices_tab       = prices_tab
-        self._get_manager_info = get_manager_info
+        self._onglet_prix          = prices_tab
+        self._get_manager_info     = get_manager_info
         uic.loadUi(os.path.join(_UI_DIR, "orders_tab.ui"), self)
         self.date_order.setDate(QDate.currentDate())
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        font = self.lbl_total.font()
-        font.setBold(True)
-        self.lbl_total.setFont(font)
+        police = self.lbl_total.font()
+        police.setBold(True)
+        self.lbl_total.setFont(police)
         self.btn_add_order.clicked.connect(self._ajouter_commande)
         self.btn_delete.clicked.connect(self._supprimer_commande)
         self.btn_calc.clicked.connect(self._calculer_couts)
@@ -83,165 +83,165 @@ class OrdersTab(QWidget):
 
     def actualiser_combo_produits(self):
         self.cmb_product.clear()
-        for p_id, p_name in db.lister_produits():
-            self.cmb_product.addItem(p_name, p_id)
+        for id_produit, nom_produit in database.lister_produits():
+            self.cmb_product.addItem(nom_produit, id_produit)
 
     def _actualiser_commandes(self):
         self.table.setRowCount(0)
-        order_date = self.date_order.date().toString("yyyy-MM-dd")
-        for row in db.lister_commandes_du_jour(order_date):
-            o_id, p_name, start_time, p_id = row
-            r = self.table.rowCount()
-            self.table.insertRow(r)
-            self.table.setItem(r, 0, QTableWidgetItem(p_name))
-            self.table.setItem(r, 1, QTableWidgetItem(start_time))
-            self.table.setItem(r, 2, QTableWidgetItem("—"))
-            self.table.setItem(r, 3, QTableWidgetItem("—"))
-            self.table.setItem(r, 4, QTableWidgetItem(order_date))
-            self.table.item(r, 0).setData(Qt.ItemDataRole.UserRole, o_id)
-            self.table.item(r, 1).setData(Qt.ItemDataRole.UserRole, p_id)
+        date_commande = self.date_order.date().toString("yyyy-MM-dd")
+        for ligne_db in database.lister_commandes_du_jour(date_commande):
+            id_commande, nom_produit, heure_debut, id_produit = ligne_db
+            ligne = self.table.rowCount()
+            self.table.insertRow(ligne)
+            self.table.setItem(ligne, 0, QTableWidgetItem(nom_produit))
+            self.table.setItem(ligne, 1, QTableWidgetItem(heure_debut))
+            self.table.setItem(ligne, 2, QTableWidgetItem("—"))
+            self.table.setItem(ligne, 3, QTableWidgetItem("—"))
+            self.table.setItem(ligne, 4, QTableWidgetItem(date_commande))
+            self.table.item(ligne, 0).setData(Qt.ItemDataRole.UserRole, id_commande)
+            self.table.item(ligne, 1).setData(Qt.ItemDataRole.UserRole, id_produit)
         self.lbl_total.setText("")
 
     def _ajouter_commande(self):
         if self.cmb_product.count() == 0:
             QMessageBox.warning(self, "Aucun produit", "Ajoutez d'abord des produits dans la configuration.")
             return
-        product_id = self.cmb_product.currentData()
-        start_time = self.time_start.time().toString("HH:mm")
-        order_date = self.date_order.date().toString("yyyy-MM-dd")
-        tasks      = db.lister_etapes_produit(product_id)
-        total_min  = sum(t[3] for t in tasks)
-        start_dt   = datetime.strptime(f"{order_date} {start_time}", "%Y-%m-%d %H:%M")
-        end_dt     = start_dt + timedelta(minutes=total_min)
+        id_produit    = self.cmb_product.currentData()
+        heure_debut   = self.time_start.time().toString("HH:mm")
+        date_commande = self.date_order.date().toString("yyyy-MM-dd")
+        etapes        = database.lister_etapes_produit(id_produit)
+        total_minutes = sum(etape[3] for etape in etapes)
+        dt_debut      = datetime.strptime(f"{date_commande} {heure_debut}", "%Y-%m-%d %H:%M")
+        dt_fin        = dt_debut + timedelta(minutes=total_minutes)
 
-        if end_dt.date() > start_dt.date():
-            QMessageBox.warning(self, "Dépassement de minuit", f"Ce produit dure {total_min} min et dépasse minuit.\nChoisissez une heure de début plus tôt.")
+        if dt_fin.date() > dt_debut.date():
+            QMessageBox.warning(self, "Dépassement de minuit", f"Ce produit dure {total_minutes} min et dépasse minuit.\nChoisissez une heure de début plus tôt.")
             if self._get_manager_info:
-                manager_name, manager_email = self._get_manager_info()
-                if manager_email:
-                    product_name = self.cmb_product.currentText()
-                    subject = f"[Alerte timing] {product_name} dépasse minuit — {order_date}"
-                    body = (
-                        f"Bonjour {manager_name},\n\n"
+                nom_responsable, email_responsable = self._get_manager_info()
+                if email_responsable:
+                    nom_produit = self.cmb_product.currentText()
+                    sujet = f"[Alerte timing] {nom_produit} dépasse minuit — {date_commande}"
+                    corps = (
+                        f"Bonjour {nom_responsable},\n\n"
                         f"La commande suivante ne sera pas terminée avant la fin de la journée :\n\n"
-                        f"  Produit     : {product_name}\n"
-                        f"  Date        : {order_date}\n"
-                        f"  Heure début : {start_time}\n"
-                        f"  Durée tot.  : {total_min} min\n"
-                        f"  Fin prévue  : {end_dt.strftime('%H:%M')} (le {end_dt.strftime('%d/%m/%Y')})\n\n"
+                        f"  Produit     : {nom_produit}\n"
+                        f"  Date        : {date_commande}\n"
+                        f"  Heure début : {heure_debut}\n"
+                        f"  Durée tot.  : {total_minutes} min\n"
+                        f"  Fin prévue  : {dt_fin.strftime('%H:%M')} (le {dt_fin.strftime('%d/%m/%Y')})\n\n"
                         "La commande n'a pas été enregistrée.\n\nVoodoo Production Manager"
                     )
-                    self._timing_worker = SimpleEmailWorker(manager_email, subject, body)
-                    self._timing_worker.start()
+                    self._worker_timing = SimpleEmailWorker(email_responsable, sujet, corps)
+                    self._worker_timing.start()
             return
 
-        db.ajouter_commande(product_id, start_time, order_date)
+        database.ajouter_commande(id_produit, heure_debut, date_commande)
         self._actualiser_commandes()
 
         if self._get_manager_info:
-            manager_name, manager_email = self._get_manager_info()
-            if manager_email:
-                product_name = self.cmb_product.currentText()
-                subject = f"[Commande] {product_name} — {order_date}"
-                body = (
-                    f"Bonjour {manager_name},\n\n"
+            nom_responsable, email_responsable = self._get_manager_info()
+            if email_responsable:
+                nom_produit = self.cmb_product.currentText()
+                sujet = f"[Commande] {nom_produit} — {date_commande}"
+                corps = (
+                    f"Bonjour {nom_responsable},\n\n"
                     f"Une nouvelle commande a été enregistrée :\n\n"
-                    f"  Produit    : {product_name}\n"
-                    f"  Date       : {order_date}\n"
-                    f"  Heure début: {start_time}\n"
-                    f"  Durée tot. : {total_min} min\n"
-                    f"  Fin prévue : {end_dt.strftime('%H:%M')}\n\nVoodoo Production Manager"
+                    f"  Produit    : {nom_produit}\n"
+                    f"  Date       : {date_commande}\n"
+                    f"  Heure début: {heure_debut}\n"
+                    f"  Durée tot. : {total_minutes} min\n"
+                    f"  Fin prévue : {dt_fin.strftime('%H:%M')}\n\nVoodoo Production Manager"
                 )
-                self._order_worker = SimpleEmailWorker(manager_email, subject, body)
-                self._order_worker.start()
+                self._worker_commande = SimpleEmailWorker(email_responsable, sujet, corps)
+                self._worker_commande.start()
 
     def _supprimer_commande(self):
-        rows = self.table.selectionModel().selectedRows()
-        if not rows:
+        lignes_selectionnees = self.table.selectionModel().selectedRows()
+        if not lignes_selectionnees:
             QMessageBox.warning(self, "Sélection requise", "Sélectionnez une commande.")
             return
-        o_id = self.table.item(rows[0].row(), 0).data(Qt.ItemDataRole.UserRole)
-        db.supprimer_commande(o_id)
+        id_commande = self.table.item(lignes_selectionnees[0].row(), 0).data(Qt.ItemDataRole.UserRole)
+        database.supprimer_commande(id_commande)
         self._actualiser_commandes()
 
     def _calculer_couts(self):
-        prices     = self._prices_tab.prix_actuels()
-        order_date = self.date_order.date().toString("yyyy-MM-dd")
-        total_cost = 0.0
+        prix          = self._onglet_prix.prix_actuels()
+        date_commande = self.date_order.date().toString("yyyy-MM-dd")
+        cout_total    = 0.0
 
-        for r in range(self.table.rowCount()):
-            p_id       = self.table.item(r, 1).data(Qt.ItemDataRole.UserRole)
-            start_time = self.table.item(r, 1).text()
-            current_dt = datetime.strptime(f"{order_date} {start_time}", "%Y-%m-%d %H:%M")
-            tasks      = db.lister_etapes_produit(p_id)
-            order_cost = 0.0
+        for ligne in range(self.table.rowCount()):
+            id_produit  = self.table.item(ligne, 1).data(Qt.ItemDataRole.UserRole)
+            heure_debut = self.table.item(ligne, 1).text()
+            dt_courant  = datetime.strptime(f"{date_commande} {heure_debut}", "%Y-%m-%d %H:%M")
+            etapes      = database.lister_etapes_produit(id_produit)
+            cout_commande = 0.0
 
-            for task in tasks:
-                _, _, _, duration_min, _, power_w, _, _, fixed_cost = task
-                energy_mwh  = (power_w / 1_000_000) * (duration_min / 60)
-                price       = api_entsoe.obtenir_prix_a_instant(prices, current_dt) if prices is not None else 0.0
-                order_cost += energy_mwh * price + fixed_cost
-                current_dt += timedelta(minutes=duration_min)
+            for etape in etapes:
+                _, _, _, duree_min, _, puissance_w, _, _, cout_fixe = etape
+                energie_mwh    = (puissance_w / 1_000_000) * (duree_min / 60)
+                prix_instant   = api_entsoe.obtenir_prix_a_instant(prix, dt_courant) if prix is not None else 0.0
+                cout_commande += energie_mwh * prix_instant + cout_fixe
+                dt_courant    += timedelta(minutes=duree_min)
 
-            start_dt      = datetime.strptime(f"{order_date} {self.table.item(r, 1).text()}", "%Y-%m-%d %H:%M")
-            total_dur_min = sum(t[3] for t in tasks)
-            end_time      = (start_dt + timedelta(minutes=total_dur_min)).strftime("%H:%M")
-            self.table.setItem(r, 2, QTableWidgetItem(end_time))
-            self.table.setItem(r, 3, QTableWidgetItem(f"{order_cost:.4f} €"))
-            total_cost += order_cost
+            dt_debut      = datetime.strptime(f"{date_commande} {self.table.item(ligne, 1).text()}", "%Y-%m-%d %H:%M")
+            total_min     = sum(etape[3] for etape in etapes)
+            heure_fin     = (dt_debut + timedelta(minutes=total_min)).strftime("%H:%M")
+            self.table.setItem(ligne, 2, QTableWidgetItem(heure_fin))
+            self.table.setItem(ligne, 3, QTableWidgetItem(f"{cout_commande:.4f} €"))
+            cout_total += cout_commande
 
-        self.lbl_total.setText(f"Coût total estimé : {total_cost:.4f} €")
+        self.lbl_total.setText(f"Coût total estimé : {cout_total:.4f} €")
 
-        if prices is None:
+        if prix is None:
             QMessageBox.information(self, "Prix non chargés", "Les prix d'électricité n'ont pas été chargés.\nLes coûts énergétiques sont calculés à 0 €/MWh.\nChargez les prix dans l'onglet « Prix Électricité ».")
 
     def _envoyer_emails(self):
-        order_date = self.date_order.date().toString("yyyy-MM-dd")
-        orders = db.lister_commandes_du_jour(order_date)
-        if not orders:
+        date_commande = self.date_order.date().toString("yyyy-MM-dd")
+        commandes = database.lister_commandes_du_jour(date_commande)
+        if not commandes:
             QMessageBox.information(self, "Aucune commande", "Aucune commande à envoyer.")
             return
 
-        schedules: dict = {}
-        for o_id, p_name, start_time, p_id in orders:
-            current_dt = datetime.strptime(f"{order_date} {start_time}", "%Y-%m-%d %H:%M").replace(tzinfo=_TZ_CET)
-            for task in db.lister_etapes_produit(p_id):
-                _, step_order, machine_name, duration_min, _, _, op_name, op_email, _ = task
-                key    = (op_name or "", op_email or "")
-                end_dt = current_dt + timedelta(minutes=duration_min)
-                line   = f"{p_name} — Étape {step_order} ({machine_name}) : {current_dt.strftime('%H:%M %Z')} → {end_dt.strftime('%H:%M %Z')} ({duration_min} min)"
-                schedules.setdefault(key, []).append(line)
-                current_dt = end_dt
+        plannings: dict = {}
+        for _, nom_produit, heure_debut, id_produit in commandes:
+            dt_courant = datetime.strptime(f"{date_commande} {heure_debut}", "%Y-%m-%d %H:%M").replace(tzinfo=_FUSEAU_HORAIRE)
+            for etape in database.lister_etapes_produit(id_produit):
+                _, ordre_etape, nom_machine, duree_min, _, _, nom_operateur, email_operateur, _ = etape
+                cle    = (nom_operateur or "", email_operateur or "")
+                dt_fin = dt_courant + timedelta(minutes=duree_min)
+                ligne  = f"{nom_produit} — Étape {ordre_etape} ({nom_machine}) : {dt_courant.strftime('%H:%M %Z')} → {dt_fin.strftime('%H:%M %Z')} ({duree_min} min)"
+                plannings.setdefault(cle, []).append(ligne)
+                dt_courant = dt_fin
 
-        if not schedules:
+        if not plannings:
             QMessageBox.information(self, "Aucun opérateur", "Aucun opérateur n'est associé aux tâches de ces commandes.")
             return
 
-        import config as _cfg
-        importlib.reload(_cfg)
-        if _cfg.EMAIL_SENDER == "votre.email@gmail.com" or _cfg.EMAIL_PASSWORD == "votre_app_password":
+        import config as _configuration
+        importlib.reload(_configuration)
+        if _configuration.EMAIL_SENDER == "votre.email@gmail.com" or _configuration.EMAIL_PASSWORD == "votre_app_password":
             QMessageBox.warning(self, "Email non configuré", "Les identifiants email sont encore des valeurs par défaut dans config.py.")
             return
 
-        extra_email = self.inp_extra_email.text().strip()
-        if extra_email:
-            all_lines = []
-            for (op_name, _), lines in schedules.items():
-                all_lines.append(f"[ {op_name} ]")
-                all_lines.extend(lines)
-                all_lines.append("")
-            schedules[("Planning complet", extra_email)] = all_lines
+        email_supplementaire = self.inp_extra_email.text().strip()
+        if email_supplementaire:
+            toutes_lignes = []
+            for (nom_operateur, _), lignes in plannings.items():
+                toutes_lignes.append(f"[ {nom_operateur} ]")
+                toutes_lignes.extend(lignes)
+                toutes_lignes.append("")
+            plannings[("Planning complet", email_supplementaire)] = toutes_lignes
 
         self.btn_email.setEnabled(False)
         self.btn_email.setText("Envoi en cours…")
-        self._email_worker = EmailWorker(schedules, order_date)
-        self._email_worker.finished.connect(self._emails_envoyes)
-        self._email_worker.start()
+        self._worker_email = EmailWorker(plannings, date_commande)
+        self._worker_email.finished.connect(self._emails_envoyes)
+        self._worker_email.start()
 
-    def _emails_envoyes(self, sent, errors):
+    def _emails_envoyes(self, envoyes, erreurs):
         self.btn_email.setEnabled(True)
         self.btn_email.setText("Envoyer les plannings par email")
-        msg = f"Emails envoyés avec succès : {sent}"
-        if errors:
-            msg += "\n\nÉchecs :\n" + "\n".join(errors)
-        QMessageBox.information(self, "Résultat envoi", msg)
+        message = f"Emails envoyés avec succès : {envoyes}"
+        if erreurs:
+            message += "\n\nÉchecs :\n" + "\n".join(erreurs)
+        QMessageBox.information(self, "Résultat envoi", message)
