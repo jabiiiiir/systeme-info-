@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QTabWidget,
     QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, QLineEdit
 )
+#Les composants graphiques de PyQt6
 
 import database
 from tab_prix          import PricesTab
@@ -15,11 +16,11 @@ from tab_commandes     import OrdersTab
 class MainWindow(QMainWindow): # Fenêtre principale de l'application — contient tous les onglets
 
     def __init__(self): # Initialise la fenêtre, crée les onglets et charge les données de démonstration
-        super().__init__() # sans ça la fenêtre ne fonctionnerait pas correctement car elle ne serait pas correctement initialisée par PyQt6
-        self.setWindowTitle("Boulangerie Jaber-Hajji")
+        super().__init__() 
+        self.setWindowTitle("Boulangerie Vodoo - Production Manager")
         self.resize(1100, 700)
 
-        database.creer_tables()
+        database.creer_tables() #: crée les 5 tables dans voodoo.db si elles n'existent pas encore
         self._charger_demo()
 
         # Barre d'identification
