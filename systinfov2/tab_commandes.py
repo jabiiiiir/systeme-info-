@@ -91,7 +91,7 @@ class OrdersTab(QWidget): # Onglet de gestion des commandes journalières — aj
         date_commande = self.date_order.date().toString("yyyy-MM-dd")
         for ligne_db in database.lister_commandes_du_jour(date_commande):
             id_commande, nom_produit, heure_debut, id_produit = ligne_db
-            ligne = self.table.rowCount()
+            ligne = self.table.rowCount()#le numéro de la ligne à insérer est égal au nombre de lignes déjà présentes
             self.table.insertRow(ligne)
             self.table.setItem(ligne, 0, QTableWidgetItem(nom_produit))
             self.table.setItem(ligne, 1, QTableWidgetItem(heure_debut))
