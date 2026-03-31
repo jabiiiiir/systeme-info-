@@ -239,3 +239,13 @@ class OrdersTab(QWidget): # Onglet de gestion des commandes journalières — aj
         if erreurs:
             message += "\n\nÉchecs :\n" + "\n".join(erreurs)
         QMessageBox.information(self, "Résultat envoi", message)
+
+    def nouvelle_table(self):
+        heure_debut   = self.time_start.time().toString("HH:mm")
+        date_commande = self.date_order.date().toString("yyyy-MM-dd")
+        id_produit    = self.cmb_product.currentData()
+        heure_fin     = self.time_end.time().toString("HH:mm")
+        puissance_kw   = self.inp_power.value()
+
+        database.nouvelle_table(id_produit, heure_debut, heure_fin, date_commande, puissance_kw)
+        self._actualiser_commandes()

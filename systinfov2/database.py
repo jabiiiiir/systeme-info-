@@ -74,6 +74,20 @@ def creer_tables(): # Crée toutes les tables de la base si elles n'existent pas
         )
     """)
 
+    curseur.execute("""
+        CREATE TABLE IF NOT EXISTS nouvelle_table (
+            id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id           INTEGER NOT NULL,
+            start_time           TEXT    NOT NULL,
+            finish_time          TEXT    NOT NULL,
+            order_date           TEXT    NOT NULL,
+            power_kw             REAL    NOT NULL,
+            electricity_price_id INTEGER,
+            FOREIGN KEY (product_id)           REFERENCES products(id),
+            FOREIGN KEY (electricity_price_id) REFERENCES electricity_prices(id)
+        )
+    """)
+
     connexion.commit() #valide et écrit toutes les modifications dans le fichier
     connexion.close()
 
@@ -324,6 +338,20 @@ def supprimer_commande(order_id): # Supprime une commande de la base par son id.
     curseur.execute("DELETE FROM orders WHERE id=?", (order_id,)) #la clause WHERE id=? cible uniquement la commande dont l'id correspond à order_id.
     connexion.commit() #valide et écrit la suppression dans le fichier
     connexion.close()
+
+#NOUVELLE_TABLE
+
+def nouvelle_table(product_id, start_time, finish_time, order_date, power_kw, electricity_price_id=None):
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute(
+        "INSERT INTO nouvelle_table (product_id, start_time, finish_time, order_date, power_kw, electricity_price_id) VALUES (?,?,?,?,?,?)",
+        (product_id, start_time, finish_time, order_date, power_kw, electricity_price_id)
+    )
+    connexion.commit()
+    nouvel_id = curseur.lastrowid
+    connexion.close()
+    return nouvel_id
 
 
 
