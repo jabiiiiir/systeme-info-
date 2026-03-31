@@ -220,7 +220,7 @@ def lister_etapes_produit(product_id): # Retourne les étapes d'un produit trié
                m.operator_email,
                m.fixed_cost
         FROM tasks t
-        JOIN machines m ON t.machine_id = m.id  #jointure pour récupérer les infos de la machine associée à chaque étape
+        JOIN machines m ON t.machine_id = m.id  -- jointure pour récupérer les infos de la machine associée à chaque étape
         WHERE t.product_id = ?
         ORDER BY t.step_order
     """, (product_id,))
@@ -339,8 +339,9 @@ def sauvegarder_prix_electricite(date_str, serie_prix): # Stocke ou met à jour 
     curseur   = connexion.cursor()
     for horodatage, prix in serie_prix.items(): #on parcourt la Series pandas. À chaque tour,
         curseur.execute(
-            "INSERT OR REPLACE INTO electricity_prices (date, hour_ts, price_eur_mwh) "
-            "VALUES (?, ?, ?)",
+            "INSERT INTO electricity_prices (date, hour_ts, price_eur_mwh) "
+            "VALUES (?, ?, ?) "
+            "ON CONFLICT(date, hour_ts) DO UPDATE SET price_eur_mwh=excluded.price_eur_mwh",
             (date_str, horodatage.isoformat(), float(prix)) #horodatage est une heure et prix est le prix correspondant
         )
     connexion.commit()
