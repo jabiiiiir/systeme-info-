@@ -12,9 +12,9 @@ from tab_configuration import ConfigTab
 from tab_commandes     import OrdersTab
 
 
-class MainWindow(QMainWindow):
+class MainWindow(QMainWindow): # Fenêtre principale de l'application — contient tous les onglets
 
-    def __init__(self):
+    def __init__(self): # Initialise la fenêtre, crée les onglets et charge les données de démonstration
         super().__init__() # sans ça la fenêtre ne fonctionnerait pas correctement car elle ne serait pas correctement initialisée par PyQt6
         self.setWindowTitle("Boulangerie Jaber-Hajji")
         self.resize(1100, 700)
@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
 
         self._appliquer_style()
 
-    def _infos_responsable(self):
+    def _infos_responsable(self): # Retourne le nom et l'email du responsable saisis dans le formulaire d'identification
         return (
             self.champ_nom.text().strip(),
             self.champ_email.text().strip(),
@@ -64,7 +64,7 @@ class MainWindow(QMainWindow):
             self.onglet_commandes.actualiser_combo_produits()
             self.onglet_commandes._actualiser_commandes()
 
-    def _charger_demo(self):
+    def _charger_demo(self): # Insère des machines et produits de démonstration si la base est vide au premier lancement
         if database.lister_machines():
             return
         machines = [
@@ -88,7 +88,7 @@ class MainWindow(QMainWindow):
             for ordre, (id_machine, duree) in enumerate(etapes, start=1):
                 database.ajouter_etape(id_produit, id_machine, duree, ordre)
 
-    def _appliquer_style(self):
+    def _appliquer_style(self): # Applique le thème graphique (couleurs boulangerie, polices) à toute l'interface
         self.setStyleSheet("""
             QMainWindow, QWidget {
                 background-color: #fdf6ec;

@@ -6,8 +6,7 @@ import sqlite3
 DB_PATH = "voodoo.db"
 
 
-def _connexion():
-
+def _connexion(): # Ouvre et retourne une connexion à la base de données SQLite
     connexion = sqlite3.connect(DB_PATH)
     connexion.execute("PRAGMA foreign_keys = ON")
     return connexion
@@ -100,8 +99,7 @@ def ajouter_machine(name, power_w, operator_name, operator_email, fixed_cost):
     return nouvel_id
 
 
-def lister_machines():
-
+def lister_machines(): # Retourne toutes les machines enregistrées dans la base, triées par nom
     connexion = _connexion()
     curseur   = connexion.cursor()
     curseur.execute(
@@ -141,7 +139,7 @@ def modifier_machine(machine_id, name, power_w, operator_name, operator_email, f
 # WHERE id=? : très important — sans cette condition, toutes les machines seraient modifiées. Ici on cible uniquement la machine dont l'id correspond
 
 
-def supprimer_machine(machine_id):
+def supprimer_machine(machine_id): # Supprime une machine de la base par son id
     connexion = _connexion()
     curseur   = connexion.cursor()
     curseur.execute("DELETE FROM machines WHERE id=?", (machine_id,))

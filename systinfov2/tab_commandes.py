@@ -12,18 +12,22 @@ import api_entsoe
 import email_sender
 
 _FUSEAU_HORAIRE = ZoneInfo("Europe/Brussels")
-_UI_DIR         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui") # : le chemin vers le dossier ui qui contient les fichiers Qt Designer. __file__ est le chemin du fichier actuel, os.path.dirname prend son dossier parent, et on y ajoute "ui"
+_UI_DIR         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui") # : le chemin vers le dossier ui qui contient les fichiers 
+#Qt Designer. __file__ est le chemin du fichier actuel, os.path.dirname prend son dossier parent, et on y ajoute "ui"
 
 
-class EmailWorker(QThread): #on utilise un thread séparé pour envoyer les emails sans bloquer l'interface. Ce worker envoie les plannings à plusieurs opérateurs en même temps.
+class EmailWorker(QThread): #on utilise un thread séparé pour envoyer les emails sans bloquer l'interface.
+    # Ce worker envoie les plannings  à plusieurs opérateurs en même temps.
     finished = pyqtSignal(int, list)
 
-    def __init__(self, plannings, date_commande): #planning c'est un dict
+    def __init__(self, plannings, date_commande): #plannings est un dict avec comme clé un tuple (nom_operateur, email_operateur) 
+        #et comme valeur une liste de lignes de planning à envoyer à cet opérateur. date_commande est juste utilisé pour construire le sujet de l'email.
         super().__init__()
         self.plannings      = plannings
         self.date_commande  = date_commande
 
-    def run(self):
+    def run(self):# Cette méthode est exécutée dans le thread séparé quand on appelle start() sur le worker. Elle envoie les emails 
+        #et émet un signal à la fin avec le nombre d'emails envoyés et la liste des erreurs éventuelles.
         envoyes, erreurs = 0, []
         for (nom_operateur, email_operateur), lignes in self.plannings.items():
             if not email_operateur:
@@ -40,7 +44,7 @@ class EmailWorker(QThread): #on utilise un thread séparé pour envoyer les emai
         self.finished.emit(envoyes, erreurs)
 
 
-class SimpleEmailWorker(QThread):
+class SimpleEmailWorker(QThread): # Envoie un email à un seul destinataire dans un thread séparé pour ne pas bloquer l'interface
     finished = pyqtSignal(bool, str)
 
     def __init__(self, email_destinataire, sujet, corps):
@@ -57,7 +61,7 @@ class SimpleEmailWorker(QThread):
             self.finished.emit(False, str(erreur))
 
 
-class OrdersTab(QWidget):
+class OrdersTab(QWidget): # Onglet de gestion des commandes journalières — ajout, suppression, calcul des coûts et envoi des plannings
 
     def __init__(self, prices_tab, get_manager_info=None):
         super().__init__()
@@ -82,7 +86,7 @@ class OrdersTab(QWidget):
 
 #Vide la liste déroulante des produits puis la remplit
 
-    def _actualiser_commandes(self):
+    def _actualiser_commandes(self): # Recharge le tableau avec les commandes enregistrées pour la date sélectionnée
         self.table.setRowCount(0)
         date_commande = self.date_order.date().toString("yyyy-MM-dd")
         for ligne_db in database.lister_commandes_du_jour(date_commande):
@@ -135,7 +139,7 @@ class OrdersTab(QWidget):
                 self._worker_commande = SimpleEmailWorker(email_responsable, sujet, corps)
                 self._worker_commande.start()
 
-    def _supprimer_commande(self):
+    def _supprimer_commande(self): # Supprime la commande sélectionnée dans le tableau et actualise l'affichage
         lignes_selectionnees = self.table.selectionModel().selectedRows()
         if not lignes_selectionnees:
             QMessageBox.warning(self, "Sélection requise", "Sélectionnez une commande.")
@@ -144,7 +148,7 @@ class OrdersTab(QWidget):
         database.supprimer_commande(id_commande)
         self._actualiser_commandes()
 
-    def _calculer_couts(self):
+    def _calculer_couts(self): # Calcule le coût énergétique et fixe de chaque commande selon les prix ENTSO-E et affiche le total
         prix          = self._onglet_prix.prix_actuels()
         date_commande = self.date_order.date().toString("yyyy-MM-dd")
         cout_total    = 0.0
@@ -187,7 +191,7 @@ class OrdersTab(QWidget):
         if prix is None:
             QMessageBox.information(self, "Prix non chargés", "Les prix d'électricité n'ont pas été chargés.\nLes coûts énergétiques sont calculés à 0 €/MWh.\nChargez les prix dans l'onglet « Prix Électricité ».")
 
-    def _envoyer_emails(self):
+    def _envoyer_emails(self): # Construit les plannings par opérateur et les envoie par email via un worker en arrière-plan
         date_commande = self.date_order.date().toString("yyyy-MM-dd")
         commandes = database.lister_commandes_du_jour(date_commande)
         if not commandes:
@@ -230,7 +234,7 @@ class OrdersTab(QWidget):
         self._worker_email.finished.connect(self._emails_envoyes)
         self._worker_email.start()
 
-    def _emails_envoyes(self, envoyes, erreurs):
+    def _emails_envoyes(self, envoyes, erreurs): # Callback appelé quand le worker email a terminé — réactive le bouton et affiche le résultat
         self.btn_email.setEnabled(True)
         self.btn_email.setText("Envoyer les plannings par email")
         message = f"Emails envoyés avec succès : {envoyes}"

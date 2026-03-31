@@ -53,7 +53,7 @@ class SimpleEmailWorker(QThread):
 
 #Ce worker est utilisé pour envoyer un email d'alerte si le seuil de prix est franchi. Comme l'envoi d'email peut aussi prendre du temps, on le fait dans un thread séparé pour ne pas bloquer l'interface. Quand il a fini, il émet un signal "finished" avec un booléen indiquant si l'envoi a réussi, et un message d'erreur s'il y en a une 
 
-class PricesTab(QWidget):
+class PricesTab(QWidget): # Onglet d'affichage des prix d'électricité ENTSO-E — graphique, seuil d'alerte et envoi email
 
     def __init__(self, get_manager_info=None):
         super().__init__()
@@ -68,7 +68,7 @@ class PricesTab(QWidget):
         self.btn_check_threshold.clicked.connect(self._verifier_seuil)
         QTimer.singleShot(100, self._chargement_auto_prix) #marge de temps
 
-    def _chargement_auto_prix(self):
+    def _chargement_auto_prix(self): # Au démarrage, charge les prix depuis le cache local si disponible, sinon les télécharge via l'API
         chaine_date = self.date_edit.date().toString("yyyy-MM-dd")
         en_cache    = database.charger_prix_electricite(chaine_date)
         if en_cache is not None:
@@ -78,7 +78,7 @@ class PricesTab(QWidget):
         else:
             self.charger_prix()
 
-    def charger_prix(self):
+    def charger_prix(self): # Lance le téléchargement des prix depuis l'API ENTSO-E dans un thread séparé
         date_qt    = self.date_edit.date()
         date_cible = datetime(date_qt.year(), date_qt.month(), date_qt.day())
         self.btn_load.setEnabled(False) # désactive le bouton pendant le chargement
@@ -88,7 +88,7 @@ class PricesTab(QWidget):
         self._worker.error.connect(self._erreur_chargement)
         self._worker.start()
 
-    def _prix_charges(self, prix):
+    def _prix_charges(self, prix): #cette méthode est appelée quand le worker a fini de récupérer les prix. Elle reçoit les prix en argument, les stocke, les affiche dans le graphique, et vérifie le seuil.
         self.prix   = prix
         chaine_date = self.date_edit.date().toString("yyyy-MM-dd")
         database.sauvegarder_prix_electricite(chaine_date, prix)
@@ -96,14 +96,14 @@ class PricesTab(QWidget):
         self._dessiner_graphique()
         self._verifier_seuil()
 
-    def _erreur_chargement(self, message):
-        self.btn_load.setEnabled(True)
+    def _erreur_chargement(self, message):#cette méthode est appelée si le worker rencontre une erreur pendant le chargement des prix. Elle réactive le bouton de chargement, affiche un message d'erreur, et montre une boîte de dialogue avec les détails de l'erreur.
+        self.btn_load.setEnabled(True) #réactive le bouton même en cas d'erreur pour permettre de réessayer
         self.lbl_info.setText("Échec du chargement.")
         QMessageBox.critical(self, "Erreur API", f"Impossible de récupérer les prix :\n{message}")
 
 #je peux effacer?
-    def _dessiner_graphique(self):
-        self.graphique.clear()
+    def _dessiner_graphique(self): #cette méthode dessine le graphique des prix. Elle est appelée après avoir chargé les prix, et aussi après avoir vérifié le seuil pour mettre à jour les couleurs des barres.
+        self.graphique.clear() #efface le graphique précédent pour dessiner le nouveau
         ax       = self.graphique.add_subplot(111)
         instants = self.prix.index.to_pydatetime()
         valeurs  = self.prix.values
@@ -124,7 +124,7 @@ class PricesTab(QWidget):
         self.lbl_info.setText(f"Min : {minimum:.2f} €/MWh   |   Max : {maximum:.2f} €/MWh   |   Heures négatives : {nb_negatifs}")
 
 
-    def _verifier_seuil(self):
+    def _verifier_seuil(self): #cette méthode vérifie si les prix descendent sous le seuil défini par l'utilisateur. Si c'est le cas, elle affiche une alerte avec les heures concernées, et envoie un email au responsable si les informations sont disponibles.
         if self.prix is None:
             QMessageBox.information(self, "Prix non chargés", "Chargez d'abord les prix avant de vérifier le seuil.")
             return

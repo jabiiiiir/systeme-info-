@@ -209,7 +209,7 @@ class ProductsTab(QWidget):
         self._actualiser_etapes()
 
 
-class ConfigTab(QWidget):
+class ConfigTab(QWidget): # Onglet de configuration principal — contient les sous-onglets Machines et Produits
 
     def __init__(self):
         super().__init__()
@@ -223,7 +223,7 @@ class ConfigTab(QWidget):
         disposition.addWidget(sous_onglets)
         self._sous_onglets = sous_onglets
 
-    def _changement_sous_onglet(self, indice):
+    def _changement_sous_onglet(self, indice): # Actualise les données quand l'utilisateur change de sous-onglet
         if indice == 1:
             self.onglet_produits.actualiser_combo_machines()
             self.onglet_produits.actualiser_produits()
