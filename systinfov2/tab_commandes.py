@@ -1,5 +1,5 @@
 import os # Pour construire les chemins vers les fichiers UI
-import importlib
+import importlib# Pour recharger la configuration des emails à chaque envoi
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -12,22 +12,20 @@ import api_entsoe
 import email_sender
 
 _FUSEAU_HORAIRE = ZoneInfo("Europe/Brussels")
-_UI_DIR         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui") # : le chemin vers le dossier ui qui contient les fichiers 
+_UI_DIR         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui")  
 #Qt Designer. __file__ est le chemin du fichier actuel, os.path.dirname prend son dossier parent, et on y ajoute "ui"
 
 
 class EmailWorker(QThread): #on utilise un thread séparé pour envoyer les emails sans bloquer l'interface.
-    # Ce worker envoie les plannings  à plusieurs opérateurs en même temps.
+    
     finished = pyqtSignal(int, list)
 
     def __init__(self, plannings, date_commande): #plannings est un dict avec comme clé un tuple (nom_operateur, email_operateur) 
-        #et comme valeur une liste de lignes de planning à envoyer à cet opérateur. date_commande est juste utilisé pour construire le sujet de l'email.
         super().__init__()
         self.plannings      = plannings
         self.date_commande  = date_commande
 
-    def run(self):# Cette méthode est exécutée dans le thread séparé quand on appelle start() sur le worker. Elle envoie les emails 
-        #et émet un signal à la fin avec le nombre d'emails envoyés et la liste des erreurs éventuelles.
+    def run(self):# Cette méthode est exécutée dans le thread séparé quand on appelle start() sur le worker. 
         envoyes, erreurs = 0, []
         for (nom_operateur, email_operateur), lignes in self.plannings.items():
             if not email_operateur:
