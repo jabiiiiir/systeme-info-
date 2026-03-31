@@ -153,7 +153,7 @@ class OrdersTab(QWidget): # Onglet de gestion des commandes journalières — aj
         date_commande = self.date_order.date().toString("yyyy-MM-dd")
         cout_total    = 0.0
 
-        for ligne in range(self.table.rowCount()):
+        for ligne in range(self.table.rowCount()): 
             id_commande = self.table.item(ligne, 0).data(Qt.ItemDataRole.UserRole)
             id_produit  = self.table.item(ligne, 1).data(Qt.ItemDataRole.UserRole)
             heure_debut = self.table.item(ligne, 1).text()

@@ -45,8 +45,8 @@ def creer_tables(): # Crée toutes les tables de la base si elles n'existent pas
             machine_id   INTEGER,
             duration_min INTEGER NOT NULL,
             step_order   INTEGER NOT NULL,
-            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE, #tout se supprime si le produit est supprimé
-            FOREIGN KEY (machine_id) REFERENCES machines(id) ON DELETE SET NULL #indique null
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE, --tout se supprime si le produit est supprimé
+            FOREIGN KEY (machine_id) REFERENCES machines(id) ON DELETE SET NULL --indique null
         )
     """)
 
