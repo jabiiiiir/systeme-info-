@@ -69,7 +69,7 @@ class MainWindow(QMainWindow): # Fenêtre principale de l'application — contie
             return
         machines = [
             ("Pétrin industriel",       3000,  "Ahmed Benali",  "ahmed.benali@voodoo.be",  5.0),
-            ("Four tunnel",             1500, "Sophie Dupont", "sophie.dupont@voodoo.be", 20.0),
+            ("Four tunnel",             1500, "Sophie Dupont", "sophie.dupont@voodoo.be", 2.0),
             ("Chambre de fermentation", 500,   "Ahmed Benali",  "ahmed.benali@voodoo.be",  2.0),
             ("Trancheuse-emballeuse",   800,   "Marc Lecomte",  "marc.lecomte@voodoo.be",  3.0),
         ]
