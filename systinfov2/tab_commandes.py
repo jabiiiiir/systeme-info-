@@ -18,7 +18,7 @@ _UI_DIR         = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui")
 class EmailWorker(QThread): #on utilise un thread séparé pour envoyer les emails sans bloquer l'interface. Ce worker envoie les plannings à plusieurs opérateurs en même temps.
     finished = pyqtSignal(int, list)
 
-    def __init__(self, plannings, date_commande):
+    def __init__(self, plannings, date_commande): #planning c'est un dict
         super().__init__()
         self.plannings      = plannings
         self.date_commande  = date_commande
@@ -140,7 +140,7 @@ class OrdersTab(QWidget):
         if not lignes_selectionnees:
             QMessageBox.warning(self, "Sélection requise", "Sélectionnez une commande.")
             return
-        id_commande = self.table.item(lignes_selectionnees[0].row(), 0).data(Qt.ItemDataRole.UserRole)
+        id_commande = self.table.item(lignes_selectionnees[0].row(), 0).data(Qt.ItemDataRole.UserRole) #récupère l'id caché de la commande dans la cellule colonne 0
         database.supprimer_commande(id_commande)
         self._actualiser_commandes()
 
@@ -167,10 +167,10 @@ class OrdersTab(QWidget):
             total_min     = sum(etape[3] for etape in etapes)
             heure_fin     = (dt_debut + timedelta(minutes=total_min)).strftime("%H:%M")
             self.table.setItem(ligne, 2, QTableWidgetItem(heure_fin))
-            self.table.setItem(ligne, 3, QTableWidgetItem(f"{cout_commande:.4f} €"))
+            self.table.setItem(ligne, 3, QTableWidgetItem(f"{cout_commande:.2f} €"))
             cout_total += cout_commande
 
-        self.lbl_total.setText(f"Coût total estimé : {cout_total:.4f} €")
+        self.lbl_total.setText(f"Coût total estimé : {cout_total:.2f} €")
 
         if prix is None:
             QMessageBox.information(self, "Prix non chargés", "Les prix d'électricité n'ont pas été chargés.\nLes coûts énergétiques sont calculés à 0 €/MWh.\nChargez les prix dans l'onglet « Prix Électricité ».")

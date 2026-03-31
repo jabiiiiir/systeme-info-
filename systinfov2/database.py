@@ -1,31 +1,23 @@
-# ==============================================================================
-# database.py - Gestion de la base de données SQLite
-#
+
 # Ce module contient toutes les fonctions CRUD (Create, Read, Update, Delete)
-# pour les quatre tables du projet :
-#   - machines   : les machines de la boulangerie
-#   - products   : les produits fabriqués
-#   - tasks      : les étapes de fabrication de chaque produit
-#   - orders     : les commandes du jour
-# ==============================================================================
 
 import sqlite3
-# directement dans Python. Pas besoin d'installer quoi que ce soit en plus. Toutes les données de l'application (machines, produits, commandes…)
-# seront stockées dans un seul fichier sur le disque dur.
+#stockées dans un seul fichier sur le disque dur.
 DB_PATH = "voodoo.db"
 
 
 def _connexion():
-    """Ouvre une connexion SQLite et active les clés étrangères."""
+
     connexion = sqlite3.connect(DB_PATH)
     connexion.execute("PRAGMA foreign_keys = ON")
     return connexion
 
+# Sans cette ligne, SQLite ne vérifierait pas ces liens
 
 def creer_tables():
-    """Crée toutes les tables si elles n'existent pas encore."""
     connexion = _connexion()
     curseur   = connexion.cursor()
+#crée un curseur — c'est l'outil qui permet d'envoyer des requêtes SQL à la base. 
 
     # Table des machines
     curseur.execute("""
@@ -47,8 +39,7 @@ def creer_tables():
         )
     """)
 
-    # Table des étapes (une étape = une machine + une durée dans un produit)
-    # step_order définit l'ordre d'exécution des étapes au sein d'un produit
+    # Table des étapes 
     curseur.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,8 +47,8 @@ def creer_tables():
             machine_id   INTEGER,
             duration_min INTEGER NOT NULL,
             step_order   INTEGER NOT NULL,
-            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-            FOREIGN KEY (machine_id) REFERENCES machines(id) ON DELETE SET NULL
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE, #tout supprimer
+            FOREIGN KEY (machine_id) REFERENCES machines(id) ON DELETE SET NULL #rend null
         )
     """)
 
@@ -94,7 +85,6 @@ def creer_tables():
 # ==============================================================================
 
 def ajouter_machine(name, power_w, operator_name, operator_email, fixed_cost):
-    """Insère une nouvelle machine. Retourne l'id généré."""
     connexion = _connexion()
     curseur   = connexion.cursor()
     curseur.execute(
@@ -109,14 +99,14 @@ def ajouter_machine(name, power_w, operator_name, operator_email, fixed_cost):
 
 
 def lister_machines():
-    """Retourne toutes les machines : (id, name, power_w, operator_name, operator_email, fixed_cost)."""
+
     connexion = _connexion()
     curseur   = connexion.cursor()
     curseur.execute(
         "SELECT id, name, power_w, operator_name, operator_email, fixed_cost "
         "FROM machines ORDER BY name"
     )
-    lignes = curseur.fetchall()
+    lignes = curseur.fetchall() #récupère toutes les lignes du résultat en une seule fois sous forme de liste de tuples.
     connexion.close()
     return lignes
 
@@ -130,13 +120,12 @@ def trouver_machine(machine_id):
         "FROM machines WHERE id=?",
         (machine_id,)
     )
-    ligne = curseur.fetchone()
+    ligne = curseur.fetchone() #, récupère une seule ligne 
     connexion.close()
     return ligne
 
 
 def modifier_machine(machine_id, name, power_w, operator_name, operator_email, fixed_cost):
-    """Met à jour les informations d'une machine existante."""
     connexion = _connexion()
     curseur   = connexion.cursor()
     curseur.execute(
@@ -154,7 +143,6 @@ def modifier_machine(machine_id, name, power_w, operator_name, operator_email, f
 
 
 def supprimer_machine(machine_id):
-    """Supprime une machine. Les étapes qui l'utilisent passent à machine_id=NULL."""
     connexion = _connexion()
     curseur   = connexion.cursor()
     curseur.execute("DELETE FROM machines WHERE id=?", (machine_id,))
