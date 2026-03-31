@@ -150,6 +150,7 @@ class OrdersTab(QWidget):
         cout_total    = 0.0
 
         for ligne in range(self.table.rowCount()):
+            id_commande = self.table.item(ligne, 0).data(Qt.ItemDataRole.UserRole)
             id_produit  = self.table.item(ligne, 1).data(Qt.ItemDataRole.UserRole)
             heure_debut = self.table.item(ligne, 1).text()
             dt_courant  = datetime.strptime(f"{date_commande} {heure_debut}", "%Y-%m-%d %H:%M")
@@ -163,12 +164,23 @@ class OrdersTab(QWidget):
                 cout_commande += energie_mwh * prix_instant + cout_fixe
                 dt_courant    += timedelta(minutes=duree_min)
 
-            dt_debut      = datetime.strptime(f"{date_commande} {self.table.item(ligne, 1).text()}", "%Y-%m-%d %H:%M")
+            dt_debut      = datetime.strptime(f"{date_commande} {heure_debut}", "%Y-%m-%d %H:%M")
             total_min     = sum(etape[3] for etape in etapes)
             heure_fin     = (dt_debut + timedelta(minutes=total_min)).strftime("%H:%M")
             self.table.setItem(ligne, 2, QTableWidgetItem(heure_fin))
             self.table.setItem(ligne, 3, QTableWidgetItem(f"{cout_commande:.2f} €"))
             cout_total += cout_commande
+
+            # Sauvegarde l'id du prix d'électricité utilisé pour cette commande
+            if prix is not None:
+                horodatage_debut = dt_debut.replace(tzinfo=_FUSEAU_HORAIRE) #sans fuseau horaire, la comparaison hour_ts <= ? ne fonctionnerait pas correctement.
+                prix_id = database.trouver_id_prix_electricite(
+                    date_commande,
+                    horodatage_debut.isoformat()
+                )
+                database.modifier_commande(id_commande, prix_id)
+
+#La base de données sait maintenant quel prix d'électricité correspond à chaque commande
 
         self.lbl_total.setText(f"Coût total estimé : {cout_total:.2f} €")
 

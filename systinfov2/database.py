@@ -47,19 +47,21 @@ def creer_tables():
             machine_id   INTEGER,
             duration_min INTEGER NOT NULL,
             step_order   INTEGER NOT NULL,
-            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE, #tout supprimer
-            FOREIGN KEY (machine_id) REFERENCES machines(id) ON DELETE SET NULL #rend null
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+            FOREIGN KEY (machine_id) REFERENCES machines(id) ON DELETE SET NULL
         )
     """)
 
     # Table des commandes journalières
     curseur.execute("""
         CREATE TABLE IF NOT EXISTS orders (
-            id           INTEGER PRIMARY KEY AUTOINCREMENT,
-            product_id   INTEGER NOT NULL,
-            start_time   TEXT    NOT NULL,
-            order_date   TEXT    NOT NULL,
-            FOREIGN KEY (product_id) REFERENCES products(id)
+            id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id           INTEGER NOT NULL,
+            start_time           TEXT    NOT NULL,
+            order_date           TEXT    NOT NULL,
+            electricity_price_id INTEGER,
+            FOREIGN KEY (product_id)           REFERENCES products(id),
+            FOREIGN KEY (electricity_price_id) REFERENCES electricity_prices(id)
         )
     """)
 
@@ -93,7 +95,7 @@ def ajouter_machine(name, power_w, operator_name, operator_email, fixed_cost):
         (name, power_w, operator_name, operator_email, fixed_cost)
     )
     connexion.commit()
-    nouvel_id = curseur.lastrowid
+    nouvel_id = curseur.lastrowid # après l'insertion, SQLite attribue automatiquement un id
     connexion.close()
     return nouvel_id
 
@@ -137,9 +139,6 @@ def modifier_machine(machine_id, name, power_w, operator_name, operator_email, f
     connexion.close()
 
 # WHERE id=? : très important — sans cette condition, toutes les machines seraient modifiées. Ici on cible uniquement la machine dont l'id correspond
-# Remarque : il n'y a pas de return ici car on n'a pas besoin de récupérer quoi que ce soit après une modification
-
-
 
 
 def supprimer_machine(machine_id):
@@ -207,7 +206,7 @@ def ajouter_etape(product_id, machine_id, duration_min, step_order):
         (product_id, machine_id, duration_min, step_order)
     )
     connexion.commit()
-    connexion.close()
+    connexion.close() 
 
 
 def lister_etapes_produit(product_id):
@@ -246,6 +245,9 @@ def prochain_ordre_etape(product_id):
     resultat = curseur.fetchone()[0]
     connexion.close()
     return resultat
+#`MAX(step_order)` : cherche le **numéro d'ordre le plus élevé** parmi les étapes existantes
+# - `COALESCE(MAX(step_order), 0)` : si le produit n'a encore aucune étape, `MAX` retourne `NULL`. `COALESCE` le remplace par `0`
+# - `+ 1` : on ajoute 1 pour obtenir le prochain numéro
 
 
 def supprimer_etape(task_id):
@@ -261,19 +263,51 @@ def supprimer_etape(task_id):
 # ORDERS (commandes)
 # ==============================================================================
 
-def ajouter_commande(product_id, start_time, order_date):
+def ajouter_commande(product_id, start_time, order_date, electricity_price_id=None):
     """Insère une commande. Retourne l'id généré."""
     connexion = _connexion()
     curseur   = connexion.cursor()
     curseur.execute(
-        "INSERT INTO orders (product_id, start_time, order_date) VALUES (?,?,?)",
-        (product_id, start_time, order_date)
+        "INSERT INTO orders (product_id, start_time, order_date, electricity_price_id) VALUES (?,?,?,?)",
+        (product_id, start_time, order_date, electricity_price_id)
     )
     connexion.commit()
     nouvel_id = curseur.lastrowid
     connexion.close()
     return nouvel_id
 
+
+def modifier_commande(order_id, electricity_price_id):
+    """Met à jour l'electricity_price_id d'une commande."""
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute(
+        "UPDATE orders SET electricity_price_id=? WHERE id=?",
+        (electricity_price_id, order_id)
+    )
+    connexion.commit()
+    connexion.close()
+
+
+def trouver_id_prix_electricite(date_str, horodatage_iso):
+    """
+    Retourne l'id du prix d'électricité correspondant à l'instant donné
+    (dernier intervalle dont l'heure de début est <= horodatage_iso).
+    Retourne None si aucun prix n'existe pour cette date.
+    """
+    connexion = _connexion()
+    curseur   = connexion.cursor()
+    curseur.execute(
+        "SELECT id FROM electricity_prices "
+        "WHERE date=? AND hour_ts <= ? "
+        "ORDER BY hour_ts DESC LIMIT 1",
+        (date_str, horodatage_iso)
+    )
+    ligne = curseur.fetchone()
+    connexion.close()
+    return ligne[0] if ligne else None
+
+#ligne[0] if ligne else None : si on a trouvé un résultat, on retourne son id. Sinon on retourne None
 
 def lister_commandes_du_jour(order_date):
     """
@@ -315,11 +349,11 @@ def sauvegarder_prix_electricite(date_str, serie_prix):
     """
     connexion = _connexion()
     curseur   = connexion.cursor()
-    for horodatage, prix in serie_prix.items():
+    for horodatage, prix in serie_prix.items(): #on parcourt la Series pandas. À chaque tour,
         curseur.execute(
             "INSERT OR REPLACE INTO electricity_prices (date, hour_ts, price_eur_mwh) "
             "VALUES (?, ?, ?)",
-            (date_str, horodatage.isoformat(), float(prix))
+            (date_str, horodatage.isoformat(), float(prix)) #horodatage est une heure et prix est le prix correspondant
         )
     connexion.commit()
     connexion.close()
@@ -342,6 +376,6 @@ def charger_prix_electricite(date_str):
     connexion.close()
     if not lignes:
         return None
-    index_temporel = pandas.to_datetime([ligne[0] for ligne in lignes], utc=True)
-    valeurs        = [ligne[1] for ligne in lignes]
+    index_temporel = pandas.to_datetime([ligne[0] for ligne in lignes], utc=True) #reconstruit l'index temporel en convertissant chaque texte stocké en vrai timestamp pandas
+    valeurs        = [ligne[1] for ligne in lignes] 
     return pandas.Series(valeurs, index=index_temporel)
