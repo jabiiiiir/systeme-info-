@@ -83,7 +83,7 @@ class MainWindow(QMainWindow): # Fenêtre principale de l'application — contie
             "Baguette":         [(identifiants["Pétrin industriel"], 15), (identifiants["Chambre de fermentation"], 45), (identifiants["Four tunnel"], 25)],
             "Croissants":       [(identifiants["Pétrin industriel"], 30), (identifiants["Chambre de fermentation"], 90), (identifiants["Four tunnel"], 20), (identifiants["Trancheuse-emballeuse"], 5)],
             "Pain de campagne": [(identifiants["Pétrin industriel"], 25), (identifiants["Chambre de fermentation"], 75), (identifiants["Four tunnel"], 40)],
-        }, #dictionnaire avec comme clé le nom du produit et comme valeur la liste des étapes de production (id machine, durée en minutes)
+        } #dictionnaire avec comme clé le nom du produit et comme valeur la liste des étapes de production (id machine, durée en minutes)
         for nom_produit, etapes in taches_produits.items():
             id_produit = database.ajouter_produit(nom_produit)
             for ordre, (id_machine, duree) in enumerate(etapes, start=1):
